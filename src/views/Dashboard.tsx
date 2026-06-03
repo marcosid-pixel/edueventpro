@@ -492,11 +492,13 @@ const Dashboard = ({ setView, onEdit, onDelete }: { setView: (v: View) => void, 
                                   >
                                     <Edit2 size={14} /> Editar Aula
                                   </button>
+                                  {onDelete && (
                                   <button onClick={() => { setActiveMenuId(null); onDelete?.(event.id); }}
                                     className="w-full text-left px-3 py-2 text-[10px] font-black uppercase tracking-widest text-red-500 hover:bg-red-500/10 rounded-xl transition-all flex items-center gap-2"
                                   >
                                     <Trash2 size={14} /> Excluir Registro
                                   </button>
+                                  )}
                                 </motion.div>
                               </>
                             )}

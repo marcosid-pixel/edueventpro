@@ -98,9 +98,16 @@ const EventGroupItem: React.FC<{ title: string; evs: AcademicEvent[]; onEditEven
 const CourseManagementView = ({ onEditEvent, setView }: { onEditEvent?: (e: AcademicEvent) => void; setView: (v: View) => void }) => {
   const { user } = useAuth();
   const { data: courses, loading: coursesLoading } = useRealtimeCollection<Course>('courses');
-  const { data: events, loading: eventsLoading } = useRealtimeCollection<AcademicEvent>('events');
+  const { data: allEvents, loading: eventsLoading } = useRealtimeCollection<AcademicEvent>('events');
   const { data: users, loading: usersLoading } = useRealtimeCollection<User>('users');
   
+  const isAdmin = user?.role === 'ADMIN';
+
+  // Professores só veem eventos onde são o teacher ou o criador
+  const events = isAdmin
+    ? allEvents
+    : allEvents.filter(e => e.teacher === user?.displayName || e.createdBy === user?.id);
+
   const [loading, setLoading] = useState(false);
   const [activeCourseMenu, setActiveCourseMenu] = useState<string | null>(null);
   const [activeBatchMenu, setActiveBatchMenu] = useState<string | null>(null);
@@ -108,7 +115,6 @@ const CourseManagementView = ({ onEditEvent, setView }: { onEditEvent?: (e: Acad
   const [globalBatchTeacher, setGlobalBatchTeacher] = useState<string>('Todos');
   const [expandedGlobalBatch, setExpandedGlobalBatch] = useState<string | null>(null);
   const [selectionModal, setSelectionModal] = useState<{ type: 'teacher' | 'category' | 'batch-teacher' | 'batch-category'; courseName?: string; courseId?: string; batchId?: string; batchTitle?: string } | null>(null);
-  const isAdmin = user?.role === 'ADMIN';
 
   const handleUpdateUserField = async (userId: string, field: string, value: any) => {
     try {
@@ -307,11 +313,49 @@ const CourseManagementView = ({ onEditEvent, setView }: { onEditEvent?: (e: Acad
     }
   };
 
-  const handleDeleteBatch = async (batchId: string) => {
+  const handleDeleteBatch = async (batchId: string, batchTitle: string) => {
+    if (!isAdmin) {
+      // Professor solicita aprovação ao admin
+      if (!confirm(`Solicitar exclusão do lote "${batchTitle}" ao Administrador?\n\nSua solicitação será registrada e o Admin será notificado.`)) return;
+      try {
+        await fetch('/api/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: '⚠️ Solicitação de Exclusão de Lote',
+            message: `Prof. ${user?.displayName} solicitou a exclusão do lote "${batchTitle}". ID do lote: ${batchId}. Acesse Gestão de Cursos para aprovar ou rejeitar.`,
+            type: 'warning',
+            userId: user?.id,
+            updatedAt: new Date().toISOString(),
+            createdAt: new Date().toISOString()
+          })
+        });
+        await fetch('/api/activity_logs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: 'Solicitação de Exclusão de Lote',
+            message: `Prof. ${user?.displayName} solicitou a exclusão do lote "${batchTitle}" (ID: ${batchId}).`,
+            type: 'warning',
+            action: 'REQUEST_DELETE_BATCH',
+            userId: user?.id,
+            userName: user?.displayName,
+            userRole: user?.role,
+            userPhotoURL: user?.photoURL,
+            createdAt: new Date().toISOString()
+          })
+        });
+        toast('Solicitação enviada! O administrador foi notificado.');
+      } catch (err) {
+        toast('Erro ao enviar solicitação');
+      }
+      return;
+    }
+
     if (!confirm('Tem certeza que deseja excluir TODO o lote de agendamentos?')) return;
 
     try {
-      const batchEvents = events.filter(e => e.batchId === batchId);
+      const batchEvents = allEvents.filter(e => e.batchId === batchId);
       setLoading(true);
       for (const ev of batchEvents) {
         await fetch(`/api/events_delete/${ev.id}`, { method: 'POST' });
@@ -377,9 +421,14 @@ const CourseManagementView = ({ onEditEvent, setView }: { onEditEvent?: (e: Acad
       <div className="bg-card-bg border border-outline-variant rounded-3xl shadow-sm overflow-hidden">
         <div className="p-5 border-b border-outline-variant flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <h2 className="text-base font-black uppercase text-text-primary tracking-wider">Todos os Lotes de Aula</h2>
-            <p className="text-[10px] text-text-secondary mt-0.5">Todos os lotes agrupados por professor.</p>
+            <h2 className="text-base font-black uppercase text-text-primary tracking-wider">
+              {isAdmin ? 'Todos os Lotes de Aula' : 'Meus Lotes de Aula'}
+            </h2>
+            <p className="text-[10px] text-text-secondary mt-0.5">
+              {isAdmin ? 'Todos os lotes agrupados por professor.' : 'Seus lotes de aulas agendados.'}
+            </p>
           </div>
+          {isAdmin && (
           <select
             value={globalBatchTeacher}
             onChange={(e) => { setGlobalBatchTeacher(e.target.value); setExpandedGlobalBatch(null); }}
@@ -390,10 +439,13 @@ const CourseManagementView = ({ onEditEvent, setView }: { onEditEvent?: (e: Acad
               <option key={t.id} value={t.displayName}>{t.displayName}</option>
             ))}
           </select>
+          )}
         </div>
         <div className="p-5 space-y-3 max-h-[500px] overflow-y-auto">
           {(() => {
-            const batches = getAllBatches(globalBatchTeacher);
+            // Professores veem automaticamente apenas os seus lotes
+            const batchFilter = isAdmin ? globalBatchTeacher : user?.displayName;
+            const batches = getAllBatches(batchFilter);
             if (batches.length === 0) return <p className="text-center text-text-secondary italic py-8">Nenhum lote encontrado.</p>;
             return batches.map(batch => {
               const sorted = [...batch.events].sort((a, b) => a.date.localeCompare(b.date));

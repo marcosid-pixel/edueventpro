@@ -415,24 +415,34 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
                   </button>
                 </>
               )}
-              <button 
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  if (confirm(`Deseja EXCLUIR permanentemente o evento:\n\n"${formData.title}"\nData: ${formData.date}\n\nEsta ação não pode ser desfeita.`)) {
+              {/* Exclusão: admin exclui diretamente, professor solicita aprovação */}
+              {isProfessor ? (
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    if (!confirm(`Solicitar EXCLUSÃO da aula ao Administrador?\n\n"${formData.title}"\nData: ${formData.date}\n\nSua solicitação será registrada e o Admin será notificado para aprovação.`)) return;
                     try {
                       setLoading(true);
-                      const response = await fetch(`/api/events_delete/${initialData.id}`, { method: 'POST' });
-                      if (!response.ok) throw new Error('Falha ao excluir');
-                      
-                      // Log da atividade
-                      if (!isTestMode()) await fetch('/api/activity_logs', {
+                      await fetch('/api/notifications', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                          title: 'Evento Excluído',
-                          message: `O evento "${formData.title}" (${formData.date}) foi excluído permanentemente.`,
-                          type: 'error',
-                          action: 'DELETE_EVENT',
+                          title: '⚠️ Solicitação de Exclusão de Aula',
+                          message: `Prof. ${user?.displayName} solicitou a exclusão de "${formData.title}" (${formData.date}, ${formData.course}). Acesse a aula para aprovar ou rejeitar a exclusão.`,
+                          type: 'warning',
+                          userId: user?.id,
+                          updatedAt: new Date().toISOString(),
+                          createdAt: new Date().toISOString()
+                        })
+                      });
+                      await fetch('/api/activity_logs', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          title: 'Solicitação de Exclusão',
+                          message: `Prof. ${user?.displayName} solicitou exclusão de "${formData.title}" (${formData.date}).`,
+                          type: 'warning',
+                          action: 'REQUEST_DELETE_EVENT',
                           userId: user?.id,
                           userName: user?.displayName,
                           userRole: user?.role,
@@ -443,31 +453,63 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
                           createdAt: new Date().toISOString()
                         })
                       });
-
-                      // Notificação
-                      if (!isTestMode()) await fetch('/api/notifications', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          title: 'Evento Excluído',
-                          message: `${user?.displayName} excluiu o evento "${formData.title}" (${formData.date}) do curso ${formData.course}.`,
-                          type: 'error',
-                          userId: user?.id,
-                          updatedAt: new Date().toISOString(),
-                          createdAt: new Date().toISOString()
-                        })
-                      });
-
-                      toast('Evento excluído!');
+                      toast('Solicitação enviada! O administrador será notificado.');
                       setView('unified-calendar');
-                    } catch (err) { console.error(err); toast('Erro ao excluir evento'); } finally { setLoading(false); }
-                  }
-                }}
-                className="px-6 py-2 bg-red-500/10 text-red-500 border border-red-500/20 font-bold text-xs rounded-lg hover:bg-red-500/20 transition-all font-headline tracking-wide uppercase flex items-center gap-2"
-              >
-                <Trash2 size={14} /> Excluir
-              </button>
-            </>
+                    } catch (err) { toast('Erro ao enviar solicitação'); } finally { setLoading(false); }
+                  }}
+                  className="px-6 py-2 bg-orange-500/10 text-orange-600 border border-orange-500/20 font-bold text-xs rounded-lg hover:bg-orange-500/20 transition-all font-headline tracking-wide uppercase flex items-center gap-2"
+                >
+                  <Trash2 size={14} /> Solicitar Exclusão
+                </button>
+              ) : (
+                <button 
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    if (confirm(`Deseja EXCLUIR permanentemente o evento:\n\n"${formData.title}"\nData: ${formData.date}\n\nEsta ação não pode ser desfeita.`)) {
+                      try {
+                        setLoading(true);
+                        const response = await fetch(`/api/events_delete/${initialData.id}`, { method: 'POST' });
+                        if (!response.ok) throw new Error('Falha ao excluir');
+                        if (!isTestMode()) await fetch('/api/activity_logs', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            title: 'Evento Excluído',
+                            message: `O evento "${formData.title}" (${formData.date}) foi excluído permanentemente.`,
+                            type: 'error',
+                            action: 'DELETE_EVENT',
+                            userId: user?.id,
+                            userName: user?.displayName,
+                            userRole: user?.role,
+                            userPhotoURL: user?.photoURL,
+                            courseName: formData.course,
+                            eventId: initialData.id,
+                            eventTitle: formData.title,
+                            createdAt: new Date().toISOString()
+                          })
+                        });
+                        if (!isTestMode()) await fetch('/api/notifications', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            title: 'Evento Excluído',
+                            message: `${user?.displayName} excluiu o evento "${formData.title}" (${formData.date}) do curso ${formData.course}.`,
+                            type: 'error',
+                            userId: user?.id,
+                            updatedAt: new Date().toISOString(),
+                            createdAt: new Date().toISOString()
+                          })
+                        });
+                        toast('Evento excluído!');
+                        setView('unified-calendar');
+                      } catch (err) { console.error(err); toast('Erro ao excluir evento'); } finally { setLoading(false); }
+                    }
+                  }}
+                  className="px-6 py-2 bg-red-500/10 text-red-500 border border-red-500/20 font-bold text-xs rounded-lg hover:bg-red-500/20 transition-all font-headline tracking-wide uppercase flex items-center gap-2"
+                >
+                  <Trash2 size={14} /> Excluir
+                </button>
+              )}
           )}
           <button 
             onClick={handleSubmit}

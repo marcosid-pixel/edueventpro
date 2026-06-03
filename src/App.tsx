@@ -129,17 +129,17 @@ export default function App() {
 
   const renderView = () => {
     switch (currentView) {
-      case 'dashboard': return <Dashboard setView={handleSetView} onEdit={startEdit} onDelete={handleDelete} />;
-      case 'unified-calendar': return <UnifiedCalendar onEdit={startEdit} onDelete={handleDelete} />;
-      case 'events': return <EventList onEdit={startEdit} onDelete={handleDelete} />;
+      case 'dashboard': return <Dashboard setView={handleSetView} onEdit={startEdit} onDelete={user?.role === 'ADMIN' ? handleDelete : undefined} />;
+      case 'unified-calendar': return <UnifiedCalendar onEdit={startEdit} onDelete={user?.role === 'ADMIN' ? handleDelete : undefined} />;
+      case 'events': return <EventList onEdit={startEdit} onDelete={user?.role === 'ADMIN' ? handleDelete : undefined} />;
       case 'courses': return <CourseManagementView onEditEvent={startEdit} setView={setView} />;
-      case 'users-admin': return <UserManagementView />;
+      case 'users-admin': return user?.role === 'ADMIN' ? <UserManagementView /> : <Dashboard setView={handleSetView} />;
       case 'speakers': return <SpeakerView />;
-      case 'reports': return <ReportsView />;
+      case 'reports': return user?.role === 'ADMIN' ? <ReportsView /> : <Dashboard setView={handleSetView} />;
       case 'new-event': return <EventForm setView={handleSetView} initialData={editingEvent} />;
       case 'login': return <LoginView setView={handleSetView} />;
       case 'signup': return <SignupView setView={handleSetView} />;
-      case 'logs': return <LogsView />;
+      case 'logs': return user?.role === 'ADMIN' ? <LogsView /> : <Dashboard setView={handleSetView} />;
       case 'settings': return <SettingsView />;
       default: return <Dashboard setView={handleSetView} />;
     }
