@@ -1,0 +1,57 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-headline: "Outfit", "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Theme-aware variables */
+  --color-secondary: var(--secondary);
+  --color-secondary-container: var(--secondary-container);
+  --color-on-secondary-container: var(--on-secondary-container);
+  --color-surface: var(--surface);
+  --color-surface-container: var(--surface-container);
+  --color-outline-variant: var(--outline-variant);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-card-bg: var(--card-bg);
+  --color-border-main: var(--border-main);
+}
+
+:root {
+  --secondary: #0058be;
+  --secondary-container: #2170e4;
+  --on-secondary-container: #fefcff;
+  --surface: #f7f9fb;
+  --surface-container: #eceef0;
+  --outline-variant: #c6c6cd;
+  --text-primary: #191c1e;
+  --text-secondary: #49454f;
+  --card-bg: #ffffff;
+  --border-main: #e1e3e5;
+}
+
+.dark {
+  --secondary: #6eaaf7;
+  --secondary-container: #00458f;
+  --on-secondary-container: #d6e3ff;
+  --surface: #0a111f; /* Deep blue dark */
+  --surface-container: #1b2433;
+  --outline-variant: #44474e;
+  --text-primary: #e2e2e6;
+  --text-secondary: #c6c6cd;
+  --card-bg: #131b2e;
+  --border-main: #2d3644;
+}
+
+@layer base {
+  body {
+    @apply bg-surface text-text-primary font-sans transition-colors duration-300;
+  }
+}
+
+.font-headline {
+  font-family: var(--font-headline);
+}
+
