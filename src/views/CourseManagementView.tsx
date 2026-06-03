@@ -132,7 +132,7 @@ const CourseManagementView = ({ onEditEvent, setView }: { onEditEvent?: (e: Acad
 
   const eventCourseNames = Array.from(new Set(events.map(e => e.course).filter(Boolean)));
   
-  const displayCourses = courses.filter(c => eventCourseNames.includes(c.name));
+  const displayCourses = isAdmin ? [...courses] : courses.filter(c => eventCourseNames.includes(c.name));
   
   eventCourseNames.forEach(name => {
     if (name && !displayCourses.find(c => c.name === name)) {
