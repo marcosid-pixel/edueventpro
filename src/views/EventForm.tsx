@@ -510,6 +510,7 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
                   <Trash2 size={14} /> Excluir
                 </button>
               )}
+            </>
           )}
           <button 
             onClick={handleSubmit}
