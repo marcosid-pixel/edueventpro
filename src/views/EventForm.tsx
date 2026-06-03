@@ -23,7 +23,7 @@ import { useAuth } from '../context/AuthContext';
 import { useRealtimeCollection } from '../hooks/useRealtimeCollection';
 import type { View, AcademicEvent, Course, User } from '../types';
 import { EVENT_CATEGORIES, ACADEMIC_COURSES } from '../constants';
-import { parseCategories, isTestMode, apiPost } from '../utils/index';
+import { parseCategories, isTestMode, apiPost, parseJsonArray } from '../utils/index';
 
 const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initialData?: AcademicEvent | null }) => {
   const { user } = useAuth();
@@ -924,7 +924,7 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
                       {users
                         .filter(u => {
                           const course = courses.find(c => c.name === formData.course);
-                          return u.courseId === course?.id || u.role === 'ADMIN';
+                          return parseJsonArray(u.courseId).includes(course?.id || '') || u.role === 'ADMIN';
                         })
                         .map(u => (
                           <option key={u.id} value={u.displayName}>{u.displayName} ({u.role})</option>
