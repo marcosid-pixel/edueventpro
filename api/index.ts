@@ -3,7 +3,7 @@ import path from "path";
 import cors from "cors";
 import cookieSession from "cookie-session";
 import rateLimit from "express-rate-limit";
-import { createServer as createViteServer } from "vite";
+// import removido para não quebrar no Vercel
 import { initDb } from "./db.js";
 import authRouter from "./auth.js";
 import apiRouter from "./api.js";
@@ -50,6 +50,7 @@ app.use("/api", apiRouter);
 // Vite / Static Files
 async function setupFrontend() {
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
