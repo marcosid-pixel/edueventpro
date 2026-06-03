@@ -68,7 +68,7 @@ const SignupView = ({ setView }: { setView: (v: View) => void }) => {
                   required
                   value={formData.displayName}
                   onChange={(e) => setFormData({...formData, displayName: e.target.value})}
-                  className="w-full h-16 bg-surface-container/50 dark:bg-white/[0.03] border border-outline-variant dark:border-white/[0.08] rounded-[24px] pl-16 pr-6 text-text-primary placeholder-text-secondary/20 focus:ring-4 focus:ring-secondary/20 focus:border-secondary transition-all font-medium text-lg outline-none" 
+                  className="w-full h-16 bg-surface-container/50 dark:bg-white/[0.03] border border-outline-variant dark:border-white/[0.08] rounded-[24px] pl-16 pr-6 text-text-primary dark:text-white placeholder-text-secondary/20 focus:ring-4 focus:ring-secondary/20 focus:border-secondary transition-all font-medium text-lg outline-none" 
                   placeholder="Dr. Ricardo Almeida" 
                 />
               </div>
@@ -83,7 +83,7 @@ const SignupView = ({ setView }: { setView: (v: View) => void }) => {
                   required
                   value={formData.email}
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  className="w-full h-16 bg-surface-container/50 dark:bg-white/[0.03] border border-outline-variant dark:border-white/[0.08] rounded-[24px] pl-16 pr-6 text-text-primary placeholder-text-secondary/20 focus:ring-4 focus:ring-secondary/20 focus:border-secondary transition-all font-medium text-lg outline-none" 
+                  className="w-full h-16 bg-surface-container/50 dark:bg-white/[0.03] border border-outline-variant dark:border-white/[0.08] rounded-[24px] pl-16 pr-6 text-text-primary dark:text-white placeholder-text-secondary/20 focus:ring-4 focus:ring-secondary/20 focus:border-secondary transition-all font-medium text-lg outline-none" 
                   placeholder="nome@uninta.edu.br" 
                 />
               </div>
@@ -97,7 +97,7 @@ const SignupView = ({ setView }: { setView: (v: View) => void }) => {
                   required
                   value={formData.password}
                   onChange={(e) => setFormData({...formData, password: e.target.value})}
-                  className="w-full h-16 bg-surface-container/50 dark:bg-white/[0.03] border border-outline-variant dark:border-white/[0.08] rounded-[24px] px-6 text-text-primary placeholder-text-secondary/20 focus:ring-4 focus:ring-secondary/20 focus:border-secondary transition-all font-medium text-lg outline-none" 
+                  className="w-full h-16 bg-surface-container/50 dark:bg-white/[0.03] border border-outline-variant dark:border-white/[0.08] rounded-[24px] px-6 text-text-primary dark:text-white placeholder-text-secondary/20 focus:ring-4 focus:ring-secondary/20 focus:border-secondary transition-all font-medium text-lg outline-none" 
                   placeholder="••••••••" 
                 />
               </div>
@@ -108,7 +108,7 @@ const SignupView = ({ setView }: { setView: (v: View) => void }) => {
                   required
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
-                  className="w-full h-16 bg-surface-container/50 dark:bg-white/[0.03] border border-outline-variant dark:border-white/[0.08] rounded-[24px] px-6 text-text-primary placeholder-text-secondary/20 focus:ring-4 focus:ring-secondary/20 focus:border-secondary transition-all font-medium text-lg outline-none" 
+                  className="w-full h-16 bg-surface-container/50 dark:bg-white/[0.03] border border-outline-variant dark:border-white/[0.08] rounded-[24px] px-6 text-text-primary dark:text-white placeholder-text-secondary/20 focus:ring-4 focus:ring-secondary/20 focus:border-secondary transition-all font-medium text-lg outline-none" 
                   placeholder="••••••••" 
                 />
               </div>
