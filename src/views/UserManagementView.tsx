@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   KeyRound,
   Mail
+} from 'lucide-react';
 import { User as UserIcon, AlertCircle as AlertIcon } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
