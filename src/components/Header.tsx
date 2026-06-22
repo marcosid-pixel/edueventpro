@@ -11,7 +11,8 @@ import { InstallPWA } from './InstallPWA';
 export const Header = ({ setView, currentView, onNewEvent }: { setView: (v: View) => void, currentView: View, onNewEvent: () => void }) => {
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { data: notifications } = useRealtimeCollection<Notification>('notifications');
+  const { data: allNotifications, refresh: refreshNotifs } = useRealtimeCollection<Notification>('notifications');
+  const notifications = allNotifications.filter(n => user?.role === 'ADMIN' ? true : n.userId === user?.id);
   const [showNotifications, setShowNotifications] = useState(false);
   const [profile, setProfile] = useState({
     displayName: user?.displayName || 'Usuário',
@@ -51,14 +52,12 @@ export const Header = ({ setView, currentView, onNewEvent }: { setView: (v: View
       </div>
       <div className="flex items-center gap-6">
         <InstallPWA />
-        {user?.role === 'ADMIN' && (
-          <button onClick={onNewEvent}
-            className="hidden md:flex items-center gap-2 px-4 py-2 bg-secondary text-white rounded-lg text-xs font-bold uppercase tracking-wider hover:opacity-90 transition-all shadow-md active:scale-95"
-          >
-            <Plus size={16} />
-            Novo Agendamento
-          </button>
-        )}
+        <button onClick={onNewEvent}
+          className="hidden md:flex items-center gap-2 px-4 py-2 bg-secondary text-white rounded-lg text-xs font-bold uppercase tracking-wider hover:opacity-90 transition-all shadow-md active:scale-95"
+        >
+          <Plus size={16} />
+          Novo Agendamento
+        </button>
         <div className="flex items-center gap-2 relative">
           <button onClick={toggleTheme} className="text-text-secondary hover:bg-surface-container p-2 rounded-full transition-colors">
             {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
@@ -90,7 +89,7 @@ export const Header = ({ setView, currentView, onNewEvent }: { setView: (v: View
                     </div>
                     <div className="flex items-center gap-2">
                       {notifications.filter(n => !n.isRead).length > 0 && (
-                        <button onClick={async () => { try { await fetch('/api/notifications_read_all', { method: 'POST' }); } catch (err) {} }}
+                        <button onClick={async () => { try { await fetch('/api/notifications_read_all', { method: 'POST' }); refreshNotifs(); } catch (err) {} }}
                           className="text-[9px] font-bold text-secondary uppercase hover:underline"
                         >Marcar todas</button>
                       )}
@@ -104,7 +103,7 @@ export const Header = ({ setView, currentView, onNewEvent }: { setView: (v: View
                           !n.isRead ? 'bg-secondary/5 border-secondary/20' : 'border-outline-variant'
                         }`}
                         onClick={async () => {
-                          if (!n.isRead) { try { await fetch(`/api/notifications_read/${n.id}`, { method: 'POST' }); n.isRead = 1; } catch (err) {} }
+                          if (!n.isRead) { try { await fetch(`/api/notifications_read/${n.id}`, { method: 'POST' }); refreshNotifs(); } catch (err) {} }
                         }}
                       >
                         <div className="flex items-start gap-3 pr-8">
@@ -116,12 +115,12 @@ export const Header = ({ setView, currentView, onNewEvent }: { setView: (v: View
                           }`} />
                           <div className="flex-1 min-w-0">
                             <p className={`text-xs font-bold group-hover:text-secondary transition-colors ${!n.isRead ? 'text-text-primary' : 'text-text-secondary'}`}>{n.title}</p>
-                            <p className="text-[10px] text-text-secondary italic mt-0.5 line-clamp-2">{n.message}</p>
+                            <p className="text-[10px] text-text-secondary italic mt-0.5 whitespace-pre-wrap">{n.message}</p>
                             <p className="text-[9px] text-text-secondary opacity-40 mt-1 font-mono">{new Date(n.updatedAt || n.createdAt).toLocaleString('pt-BR')}</p>
                           </div>
                         </div>
                         {!n.isRead && (
-                          <button onClick={async (e) => { e.stopPropagation(); try { await fetch(`/api/notifications_read/${n.id}`, { method: 'POST' }); n.isRead = 1; } catch (err) {} }}
+                          <button onClick={async (e) => { e.stopPropagation(); try { await fetch(`/api/notifications_read/${n.id}`, { method: 'POST' }); refreshNotifs(); } catch (err) {} }}
                             className="absolute top-1/2 -translate-y-1/2 right-3 p-1.5 bg-secondary/10 text-secondary rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-secondary hover:text-white" title="Marcar como lida"
                           ><CheckCircle2 size={14} /></button>
                         )}

@@ -74,12 +74,7 @@ export default function ScheduleHub({ onEdit, onNewEvent, onDelete }: { onEdit: 
     }
 
     // 4. Role visibility
-    const isOwner = e.createdBy === user?.id || e.teacher === user?.displayName;
-    const matchesCourse = userCourseNames.length > 0 && userCourseNames.includes(e.course);
-    const userCategories = parseJsonArray(user?.category);
-    const matchesCategory = userCategories.length === 0 || userCategories.includes(e.category);
-    
-    if (!isAdmin && !isOwner && !(matchesCourse && matchesCategory)) return false;
+    if (!isAdmin && e.teacher !== user?.displayName && e.createdBy !== user?.id) return false;
 
     // 5. Date filter (only for week view)
     if (viewMode === 'week') {
@@ -144,11 +139,9 @@ export default function ScheduleHub({ onEdit, onNewEvent, onDelete }: { onEdit: 
               </span>
             </div>
          </div>
-         {isAdmin && (
-           <button onClick={onNewEvent} className="flex items-center gap-2 px-6 py-2.5 bg-secondary text-white rounded-xl font-bold text-sm hover:opacity-90 transition-all shadow-md active:scale-95">
-             <Plus size={16} /> Novo Agendamento
-           </button>
-         )}
+         <button onClick={onNewEvent} className="flex items-center gap-2 px-6 py-2.5 bg-secondary text-white rounded-xl font-bold text-sm hover:opacity-90 transition-all shadow-md active:scale-95">
+           <Plus size={16} /> Novo Agendamento
+         </button>
       </div>
 
       {/* Toolbar */}

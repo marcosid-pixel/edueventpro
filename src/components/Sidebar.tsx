@@ -10,10 +10,10 @@ export const Sidebar = ({ currentView, setView }: { currentView: View, setView: 
   const navItems: NavItem[] = [
     { id: 'dashboard', label: 'Painel Geral', icon: LayoutDashboard },
     { id: 'courses', label: 'Gestão de Cursos', icon: GraduationCap },
+    { id: 'controle-geral', label: 'Controle de Eventos', icon: Calendar },
   ];
 
   if (user?.role === 'ADMIN') {
-    navItems.splice(1, 0, { id: 'controle-geral', label: 'Controle de Eventos', icon: Calendar });
     navItems.push({ id: 'users-admin', label: 'Painel Admin', icon: ShieldCheck });
     navItems.push({ id: 'logs', label: 'Auditoria', icon: History });
     navItems.push({ id: 'reports', label: 'Relatórios', icon: FileText });
