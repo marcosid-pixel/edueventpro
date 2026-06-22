@@ -43,7 +43,8 @@ export default function App() {
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
       const latest = sorted[0];
-      const isNew = latest && (Date.now() - new Date(latest.createdAt).getTime() < 10000);
+      const diff = Date.now() - new Date(latest.createdAt).getTime();
+      const isNew = Math.abs(diff) < 15000; // Recente (janela de 15s) ignorando pequenos desvios de fuso
       
       if (isNew && !shownNotifications.current.has(latest.id)) {
         setActiveToast(latest);
