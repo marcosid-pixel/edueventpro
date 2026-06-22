@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Toaster, toast } from 'react-hot-toast';
 import { Plus, Bell, GraduationCap, X } from 'lucide-react';
@@ -31,6 +31,7 @@ export default function App() {
   const [editingEvent, setEditingEvent] = useState<AcademicEvent | null>(null);
   const [activeToast, setActiveToast] = useState<Notification | null>(null);
   const { data: globalNotifications } = useRealtimeCollection<Notification>('notifications');
+  const shownNotifications = useRef<Set<string>>(new Set());
 
   if (window.location.pathname === '/reset-password') {
     return <ResetPasswordView />;
@@ -43,8 +44,10 @@ export default function App() {
       );
       const latest = sorted[0];
       const isNew = latest && (Date.now() - new Date(latest.createdAt).getTime() < 10000);
-      if (isNew) {
+      
+      if (isNew && !shownNotifications.current.has(latest.id)) {
         setActiveToast(latest);
+        shownNotifications.current.add(latest.id);
         const timer = setTimeout(() => setActiveToast(null), 8000);
         return () => clearTimeout(timer);
       }
