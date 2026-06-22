@@ -154,6 +154,7 @@ export default function App() {
 
   return (
     <div className={`min-h-screen bg-surface transition-colors duration-300 ${theme === 'dark' ? 'dark' : ''}`}>
+      <Toaster position="top-center" />
       <Sidebar currentView={currentView} setView={handleSetView} />
       <Header currentView={currentView} setView={handleSetView} onNewEvent={handleNewEvent} />
       <main className={`transition-all duration-300 ${currentView !== 'login' && currentView !== 'signup' ? 'ml-[260px] pt-24 px-8 pb-12' : ''}`}>
