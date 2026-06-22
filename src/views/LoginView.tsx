@@ -40,7 +40,7 @@ const LoginView = ({ setView }: { setView: (v: View) => void }) => {
         body: JSON.stringify({ email: formData.email })
       });
       if (!res.ok) throw new Error('Erro ao solicitar');
-      toast.success('Solicitação enviada! O administrador enviará um link para seu e-mail.');
+      toast.success('E-mail enviado! Verifique sua Caixa de Entrada e também a pasta de Spam.', { duration: 6000, icon: '📧' });
     } catch (err) {
       toast.error('Erro ao enviar solicitação de recuperação.');
     } finally {
