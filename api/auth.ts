@@ -138,18 +138,39 @@ router.post("/request-reset", async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: "E-mail obrigatório" });
-    const result = await turso.execute("SELECT id, displayName FROM users WHERE email = ?", [email]);
-    if (result.rows.length === 0) return res.json({ success: true }); // pretend it worked for security
+    const result = await turso.execute("SELECT id, displayName, email FROM users WHERE email = ?", [email]);
+    if (result.rows.length === 0) return res.json({ success: true });
 
     const user = result.rows[0] as any;
-    await turso.execute("UPDATE users SET resetRequested = 1 WHERE id = ?", [user.id]);
     
-    // Create an alert notification for the admin
-    const notifId = `notif_${Date.now()}`;
-    await turso.execute(
-      `INSERT INTO notifications (id, title, message, type) VALUES (?, ?, ?, ?)`,
-      [notifId, "Solicitação de Redefinição de Senha", `O usuário ${user.displayName} (${email}) solicitou a redefinição de senha. Vá para a Governança de Usuários para enviar o link.`, "alert"]
-    );
+    if (!process.env.SMTP_EMAIL || !process.env.SMTP_PASSWORD) {
+      return res.status(500).json({ error: "Servidor SMTP não configurado" });
+    }
+
+    const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    await turso.execute("UPDATE users SET resetRequested = 0, resetToken = ? WHERE id = ?", [token, user.id]);
+    
+    let baseUrl = req.headers.origin || (req.headers.referer ? new URL(req.headers.referer).origin : 'http://localhost:3000');
+    if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1);
+    
+    const resetLink = `${baseUrl}/reset-password?token=${token}`;
+    
+    await transporter.sendMail({
+      from: `"EduEvent Pro" <${process.env.SMTP_EMAIL}>`,
+      to: user.email,
+      subject: "Redefinição de Senha - EduEvent Pro",
+      html: `
+        <div style="font-family: sans-serif; padding: 20px;">
+          <h2>Olá, ${user.displayName}!</h2>
+          <p>Você solicitou a redefinição da sua senha no EduEvent Pro.</p>
+          <p>Clique no botão abaixo para criar sua nova senha com segurança:</p>
+          <a href="${resetLink}" style="display: inline-block; padding: 10px 20px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0;">
+            Criar Nova Senha
+          </a>
+          <p>Se você não solicitou isso, pode ignorar este e-mail. Este link é válido apenas para uma utilização.</p>
+        </div>
+      `
+    });
 
     res.json({ success: true });
   } catch (err: any) {
