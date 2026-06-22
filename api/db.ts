@@ -30,6 +30,8 @@ export async function initDb() {
       { table: 'users', column: 'role', type: "TEXT DEFAULT 'professor'" },
       { table: 'users', column: 'courseId', type: 'TEXT' },
       { table: 'users', column: 'category', type: 'TEXT' },
+      { table: 'users', column: 'resetRequested', type: 'BOOLEAN DEFAULT 0' },
+      { table: 'users', column: 'resetToken', type: 'TEXT' },
       { table: 'events', column: 'category', type: 'TEXT' },
       { table: 'events', column: 'batchId', type: 'TEXT' },
       { table: 'events', column: 'cabinInfo', type: 'TEXT' },

@@ -9,8 +9,8 @@ import {
   Calendar,
   Clock,
   CheckCircle2,
-  KeyRound
-} from 'lucide-react';
+  KeyRound,
+  Mail
 import { User as UserIcon, AlertCircle as AlertIcon } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
@@ -36,28 +36,24 @@ const UserManagementView = () => {
     } catch (err) { console.error(err); }
   };
 
-  const handleResetPassword = async (userId: string, userName: string) => {
-    const newPassword = prompt(`Defina uma nova senha para o usuário ${userName} (mínimo 6 caracteres):`);
-    if (!newPassword) return;
-    if (newPassword.length < 6) {
-      toast.error('A senha deve ter no mínimo 6 caracteres.');
-      return;
-    }
+  const handleSendResetLink = async (userId: string, userName: string) => {
+    if (!confirm(`Enviar um e-mail com link de redefinição de senha para ${userName}?`)) return;
     
     try {
-      const res = await fetch('/api/auth/reset-user-password', {
+      toast.loading("Enviando e-mail...", { id: 'reset' });
+      const res = await fetch('/api/auth/send-reset-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, newPassword })
+        body: JSON.stringify({ userId })
       });
       const data = await res.json();
       if (data.error) {
-        toast.error(data.error);
+        toast.error(data.error, { id: 'reset' });
       } else {
-        toast.success(`Senha de ${userName} atualizada com sucesso!`);
+        toast.success(`E-mail enviado para ${userName} com sucesso!`, { id: 'reset' });
       }
     } catch (err) {
-      toast.error('Erro ao redefinir a senha.');
+      toast.error('Erro de conexão.', { id: 'reset' });
     }
   };
 
@@ -293,10 +289,10 @@ const UserManagementView = () => {
 
                         <div className="pt-2">
                            <button 
-                             onClick={() => handleResetPassword(u.id, u.displayName)}
-                             className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 rounded-xl text-xs font-black transition-colors"
+                             onClick={() => handleSendResetLink(u.id, u.displayName)}
+                             className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-600 rounded-xl text-xs font-black transition-colors"
                            >
-                             <KeyRound size={14} /> REDEFINIR SENHA DO USUÁRIO
+                             <Mail size={14} /> ENVIAR LINK PARA REDEFINIR SENHA
                            </button>
                         </div>
                       </div>

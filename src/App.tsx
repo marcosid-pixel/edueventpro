@@ -22,6 +22,7 @@ import SettingsView from './views/SettingsView';
 import LoginView from './views/LoginView';
 import SignupView from './views/SignupView';
 import LogsView from './views/LogsView';
+import ResetPasswordView from './views/ResetPasswordView';
 
 export default function App() {
   const { user, loading } = useAuth();
@@ -30,6 +31,10 @@ export default function App() {
   const [editingEvent, setEditingEvent] = useState<AcademicEvent | null>(null);
   const [activeToast, setActiveToast] = useState<Notification | null>(null);
   const { data: globalNotifications } = useRealtimeCollection<Notification>('notifications');
+
+  if (window.location.pathname === '/reset-password') {
+    return <ResetPasswordView />;
+  }
 
   useEffect(() => {
     if (globalNotifications.length > 0) {

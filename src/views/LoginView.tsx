@@ -10,6 +10,7 @@ const LoginView = ({ setView }: { setView: (v: View) => void }) => {
   const { theme, toggleTheme } = useTheme();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -22,6 +23,27 @@ const LoginView = ({ setView }: { setView: (v: View) => void }) => {
       setError(err.message === 'Invalid credentials' ? 'Credenciais inválidas' : err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRequestReset = async () => {
+    if (!formData.email) {
+      import('react-hot-toast').then(({ toast }) => toast.error('Digite seu e-mail institucional primeiro para recuperar a senha.'));
+      return;
+    }
+    setResetLoading(true);
+    try {
+      const res = await fetch('/api/auth/request-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email })
+      });
+      if (!res.ok) throw new Error('Erro ao solicitar');
+      import('react-hot-toast').then(({ toast }) => toast.success('Solicitação enviada! O administrador enviará um link para seu e-mail.'));
+    } catch (err) {
+      import('react-hot-toast').then(({ toast }) => toast.error('Erro ao enviar solicitação de recuperação.'));
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -191,8 +213,13 @@ const LoginView = ({ setView }: { setView: (v: View) => void }) => {
                   />
                 </div>
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center">
-                  <button type="button" className="text-[10px] font-black text-indigo-core hover:text-indigo-core/80 transition-colors uppercase tracking-widest px-2">
-                    Recuperar
+                  <button 
+                    type="button" 
+                    onClick={handleRequestReset}
+                    disabled={resetLoading}
+                    className="text-[10px] font-black text-indigo-core hover:text-indigo-core/80 transition-colors uppercase tracking-widest px-2 disabled:opacity-50"
+                  >
+                    {resetLoading ? 'Aguarde...' : 'Recuperar'}
                   </button>
                 </div>
               </div>
