@@ -1,6 +1,6 @@
 import { LucideIcon } from 'lucide-react';
 
-export type View = 'dashboard' | 'dashboard-admin' | 'events' | 'unified-calendar' | 'courses' | 'new-event' | 'speakers' | 'reports' | 'settings' | 'login' | 'signup' | 'users-admin' | 'logs';
+export type View = 'dashboard' | 'dashboard-admin' | 'events' | 'unified-calendar' | 'controle-geral' | 'courses' | 'new-event' | 'speakers' | 'reports' | 'settings' | 'login' | 'signup' | 'users-admin' | 'logs';
 
 export interface NavItem {
   id: View;
@@ -44,6 +44,7 @@ export interface AcademicEvent {
   precisa_arte?: boolean;
   cabinInfo?: string;
   plataforma_meet?: boolean;
+  meetLink?: string;
   plataforma_comapos?: boolean;
   convidado_externo?: boolean;
   precisa_cabine?: boolean;

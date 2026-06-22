@@ -10,6 +10,7 @@ import { isTestMode, apiPost } from './utils/index';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import Dashboard from './views/Dashboard';
+import ScheduleHub from './views/ScheduleHub';
 import UnifiedCalendar from './views/UnifiedCalendar';
 import EventList from './views/EventList';
 import CourseManagementView from './views/CourseManagementView';
@@ -130,6 +131,7 @@ export default function App() {
   const renderView = () => {
     switch (currentView) {
       case 'dashboard': return <Dashboard setView={handleSetView} onEdit={startEdit} onDelete={user?.role === 'ADMIN' ? handleDelete : undefined} />;
+      case 'controle-geral': return user?.role === 'ADMIN' ? <ScheduleHub onEdit={startEdit} onNewEvent={handleNewEvent} onDelete={handleDelete} /> : <Dashboard setView={handleSetView} onEdit={startEdit} />;
       case 'unified-calendar': return <UnifiedCalendar onEdit={startEdit} onDelete={user?.role === 'ADMIN' ? handleDelete : undefined} />;
       case 'events': return <EventList onEdit={startEdit} onDelete={user?.role === 'ADMIN' ? handleDelete : undefined} />;
       case 'courses': return <CourseManagementView onEditEvent={startEdit} setView={setView} />;

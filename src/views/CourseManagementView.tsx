@@ -19,18 +19,17 @@ import { useAuth } from '../context/AuthContext';
 import { useRealtimeCollection } from '../hooks/useRealtimeCollection';
 import { SkeletonCard } from '../components/Skeleton';
 import { ModernSelectionModal } from '../components/ModernSelectionModal';
-import { parseCategories, parseJsonArray, getCourseStyle, getCategoryStyle, calculateTotalHours, getEventHours } from '../utils/index';
+import { parseCategories, parseJsonArray, getCourseStyle, getCategoryStyle, calculateTotalHours, getEventHours, getEventConfirmationState } from '../utils/index';
 import { EVENT_CATEGORIES } from '../constants';
 import type { View, AcademicEvent, Course, User, Notification } from '../types';
 
-const EventGroupItem: React.FC<{ title: string; evs: AcademicEvent[]; onEditEvent?: (e: AcademicEvent) => void }> = ({ title, evs, onEditEvent }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+const EventGroupItem: React.FC<{ groupId: string; title: string; evs: AcademicEvent[]; onEditEvent?: (e: AcademicEvent) => void; isExpanded: boolean; onToggle: () => void }> = ({ groupId, title, evs, onEditEvent, isExpanded, onToggle }) => {
   const sortedEvs = [...evs].sort((a, b) => a.date.localeCompare(b.date));
   
   return (
     <div className="space-y-1">
       <div 
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={onToggle}
         className="flex items-center justify-between p-3 bg-surface-container rounded-xl border border-outline-variant hover:border-secondary/40 transition-all cursor-pointer group/group"
       >
         <div className="flex items-center gap-3">
@@ -67,7 +66,14 @@ const EventGroupItem: React.FC<{ title: string; evs: AcademicEvent[]; onEditEven
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden pl-4 space-y-1"
           >
-            {sortedEvs.map(event => (
+            {sortedEvs.map(event => {
+              const confirmState = getEventConfirmationState(event);
+              let statusDot = 'bg-secondary';
+              if (confirmState === 'CONFIRMED' || confirmState === 'AUTO_CONFIRMED') statusDot = 'bg-green-500';
+              else if (confirmState === 'CANCELLED') statusDot = 'bg-red-500';
+              else if (confirmState === 'PENDING_CONFIRMATION') statusDot = 'bg-orange-500 animate-pulse';
+              
+              return (
               <div 
                 key={event.id} 
                 onClick={(e) => {
@@ -77,9 +83,24 @@ const EventGroupItem: React.FC<{ title: string; evs: AcademicEvent[]; onEditEven
                 className="flex items-center justify-between text-[11px] p-2.5 bg-surface-container/50 rounded-xl border border-outline-variant hover:border-secondary/30 hover:bg-secondary/5 transition-all group/event cursor-pointer"
               >
                 <div className="flex items-center gap-3">
-                  <div className={`w-1.5 h-1.5 rounded-full ${event.status === 'Confirmed' ? 'bg-green-500' : 'bg-secondary'}`} />
-                  <span className="font-bold text-text-primary line-clamp-1 group-hover/event:text-secondary transition-colors">
+                  <div className={`w-1.5 h-1.5 rounded-full ${statusDot}`} />
+                  <span className="font-bold text-text-primary line-clamp-1 group-hover/event:text-secondary transition-colors flex items-center gap-2">
                     {event.title.includes('(') ? `Aula ${event.title.split('(')[1].replace(')', '')}` : event.title}
+                    {confirmState === 'PENDING_CONFIRMATION' && (
+                      <button 
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          try {
+                            await fetch(`/api/events_update/${event.id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'Confirmed' }) });
+                            toast('Aula confirmada!');
+                          } catch (err) { toast('Erro ao confirmar'); }
+                        }}
+                        className="text-[8px] bg-green-500 text-white px-2 py-0.5 rounded shadow hover:bg-green-600 transition-all font-bold flex items-center gap-1 active:scale-95 ml-2"
+                        title="Confirmar Realização"
+                      >
+                        ✔️ Confirmar Aula
+                      </button>
+                    )}
                   </span>
                 </div>
                 <div className="text-right shrink-0">
@@ -87,7 +108,7 @@ const EventGroupItem: React.FC<{ title: string; evs: AcademicEvent[]; onEditEven
                   <p className="text-[8px] font-medium text-text-secondary">{event.timeStart}</p>
                 </div>
               </div>
-            ))}
+            )})}
           </motion.div>
         )}
       </AnimatePresence>
@@ -103,18 +124,23 @@ const CourseManagementView = ({ onEditEvent, setView }: { onEditEvent?: (e: Acad
   
   const isAdmin = user?.role === 'ADMIN';
 
-  // Professores só veem eventos onde são o teacher ou o criador
-  const events = isAdmin
-    ? allEvents
-    : allEvents.filter(e => e.teacher === user?.displayName || e.createdBy === user?.id);
-
   const [loading, setLoading] = useState(false);
   const [activeCourseMenu, setActiveCourseMenu] = useState<string | null>(null);
   const [activeBatchMenu, setActiveBatchMenu] = useState<string | null>(null);
   const [expandedBatchId, setExpandedBatchId] = useState<string | null>(null);
   const [globalBatchTeacher, setGlobalBatchTeacher] = useState<string>('Todos');
   const [expandedGlobalBatch, setExpandedGlobalBatch] = useState<string | null>(null);
+  const [expandedCourseGroups, setExpandedCourseGroups] = useState<Set<string>>(new Set());
   const [selectionModal, setSelectionModal] = useState<{ type: 'teacher' | 'category' | 'batch-teacher' | 'batch-category'; courseName?: string; courseId?: string; batchId?: string; batchTitle?: string } | null>(null);
+
+  // Professores só veem eventos onde são o teacher ou o criador
+  const baseEvents = isAdmin
+    ? allEvents
+    : allEvents.filter(e => e.teacher === user?.displayName || e.createdBy === user?.id);
+
+  const events = globalBatchTeacher !== 'Todos'
+    ? baseEvents.filter(e => e.teacher === globalBatchTeacher || e.createdBy === globalBatchTeacher)
+    : baseEvents;
 
   const handleUpdateUserField = async (userId: string, field: string, value: any) => {
     try {
@@ -132,7 +158,17 @@ const CourseManagementView = ({ onEditEvent, setView }: { onEditEvent?: (e: Acad
 
   const eventCourseNames = Array.from(new Set(events.map(e => e.course).filter(Boolean)));
   
-  const displayCourses = isAdmin ? [...courses] : courses.filter(c => eventCourseNames.includes(c.name));
+  let displayCourses = isAdmin ? [...courses] : courses.filter(c => eventCourseNames.includes(c.name));
+  
+  if (isAdmin && globalBatchTeacher !== 'Todos') {
+    displayCourses = courses.filter(c => {
+      const hasEvents = eventCourseNames.includes(c.name);
+      const teacherObj = users.find(u => u.displayName === globalBatchTeacher);
+      const courseIdStr = teacherObj?.courseId ? String(teacherObj.courseId).toLowerCase() : '';
+      const isAssigned = courseIdStr.includes(c.id.toLowerCase()) || courseIdStr.includes(c.name.toLowerCase());
+      return hasEvents || isAssigned;
+    });
+  }
   
   eventCourseNames.forEach(name => {
     if (name && !displayCourses.find(c => c.name === name)) {
@@ -392,6 +428,18 @@ const CourseManagementView = ({ onEditEvent, setView }: { onEditEvent?: (e: Acad
           <h1 className="text-3xl font-black font-headline text-text-primary">Gestão de Cursos & Aulas</h1>
           <p className="text-sm text-text-secondary mt-1">Acompanhamento centralizado de lotes e distribuição docente por departamento.</p>
         </div>
+        {isAdmin && (
+          <select
+            value={globalBatchTeacher}
+            onChange={(e) => { setGlobalBatchTeacher(e.target.value); setExpandedGlobalBatch(null); }}
+            className="bg-surface-container border border-outline-variant rounded-xl px-4 py-2 text-xs font-bold text-text-primary outline-none focus:ring-2 focus:ring-secondary/50 shadow-sm self-center"
+          >
+            <option value="Todos">Todos os Professores</option>
+            {users.filter(u => u.role !== 'USER').sort((a,b) => a.displayName.localeCompare(b.displayName)).map(t => (
+              <option key={t.id} value={t.displayName}>{t.displayName}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       {events.some(e => e.batchId) && (
@@ -428,18 +476,6 @@ const CourseManagementView = ({ onEditEvent, setView }: { onEditEvent?: (e: Acad
               {isAdmin ? 'Todos os lotes agrupados por professor.' : 'Seus lotes de aulas agendados.'}
             </p>
           </div>
-          {isAdmin && (
-          <select
-            value={globalBatchTeacher}
-            onChange={(e) => { setGlobalBatchTeacher(e.target.value); setExpandedGlobalBatch(null); }}
-            className="bg-surface-container border border-outline-variant rounded-xl px-3 py-2 text-xs font-bold text-text-primary outline-none focus:ring-2 focus:ring-secondary/50"
-          >
-            <option value="Todos">Todos os Professores</option>
-            {teachers.map(t => (
-              <option key={t.id} value={t.displayName}>{t.displayName}</option>
-            ))}
-          </select>
-          )}
         </div>
         <div className="p-5 space-y-3 max-h-[500px] overflow-y-auto">
           {(() => {
@@ -495,22 +531,44 @@ const CourseManagementView = ({ onEditEvent, setView }: { onEditEvent?: (e: Acad
                       >
                         <div className="border-t border-outline-variant/60 mx-3" />
                         <div className="p-3 space-y-1.5 max-h-[300px] overflow-y-auto">
-                          {sorted.map(ev => (
+                          {sorted.map(ev => {
+                            const confirmState = getEventConfirmationState(ev);
+                            let statusDot = 'bg-slate-400';
+                            if (confirmState === 'CONFIRMED' || confirmState === 'AUTO_CONFIRMED') statusDot = 'bg-green-500';
+                            else if (confirmState === 'CANCELLED') statusDot = 'bg-red-500';
+                            else if (confirmState === 'PENDING_CONFIRMATION') statusDot = 'bg-orange-500 animate-pulse';
+
+                            return (
                             <div
                               key={ev.id}
                               onClick={(e) => { e.stopPropagation(); onEditEvent?.(ev); }}
                               className="flex items-center gap-2.5 p-2 bg-card-bg rounded-lg border border-outline-variant hover:border-secondary/30 hover:bg-secondary/5 transition-all cursor-pointer group/event"
                             >
-                              <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${ev.status === 'Confirmed' ? 'bg-green-500' : ev.status === 'Cancelled' ? 'bg-red-500' : 'bg-slate-400'}`} />
+                              <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusDot}`} />
                               <span className="text-[10px] font-mono text-text-secondary shrink-0 tabular-nums">
                                 {new Date(ev.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
                               </span>
                               <span className="text-[10px] font-bold text-text-primary truncate group-hover/event:text-secondary transition-colors">
                                 {ev.title}
                               </span>
+                              {confirmState === 'PENDING_CONFIRMATION' && (
+                                <button 
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    try {
+                                      await fetch(`/api/events_update/${ev.id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'Confirmed' }) });
+                                      toast('Aula confirmada!');
+                                    } catch (err) { toast('Erro ao confirmar'); }
+                                  }}
+                                  className="text-[8px] bg-green-500 text-white px-2 py-0.5 rounded shadow hover:bg-green-600 transition-all font-bold flex items-center gap-1 active:scale-95 ml-2"
+                                  title="Confirmar Realização"
+                                >
+                                  ✔️ Confirmar Aula
+                                </button>
+                              )}
                               {ev.timeStart && <span className="text-[9px] text-text-secondary font-mono shrink-0 ml-auto">{ev.timeStart}</span>}
                             </div>
-                          ))}
+                          )})}
                         </div>
                       </motion.div>
                     )}
@@ -528,7 +586,7 @@ const CourseManagementView = ({ onEditEvent, setView }: { onEditEvent?: (e: Acad
           const CourseIcon = style.icon;
           
           return (
-            <div key={course.id} className={`bg-card-bg rounded-2xl border ${style.border} shadow-sm overflow-hidden flex flex-col group transition-all hover:border-secondary/20 hover:shadow-lg`}>
+            <div key={course.id} className={`bg-card-bg rounded-3xl border ${style.border} shadow-lg ${style.shadow.replace('/20', '/30')} hover:shadow-2xl hover:${style.shadow.replace('/20', '/50')} hover:-translate-y-1 overflow-hidden flex flex-col group transition-all duration-300`}>
               <div className="p-6 border-b border-outline-variant flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className={`w-12 h-12 ${style.bg} rounded-xl flex items-center justify-center ${style.color} border ${style.border}`}>
@@ -708,14 +766,25 @@ const CourseManagementView = ({ onEditEvent, setView }: { onEditEvent?: (e: Acad
                     groups[baseTitle].push(e);
                   });
 
-                  return Object.entries(groups).map(([title, evs]) => (
-                    <EventGroupItem 
-                      key={title} 
-                      title={title} 
-                      evs={evs} 
-                      onEditEvent={onEditEvent} 
-                    />
-                  ));
+                  return Object.entries(groups).map(([title, evs]) => {
+                    const groupId = `${course.id}-${title}`;
+                    return (
+                      <EventGroupItem 
+                        key={groupId}
+                        groupId={groupId}
+                        title={title} 
+                        evs={evs} 
+                        onEditEvent={onEditEvent}
+                        isExpanded={expandedCourseGroups.has(groupId)}
+                        onToggle={() => setExpandedCourseGroups(prev => {
+                          const next = new Set(prev);
+                          if (next.has(groupId)) next.delete(groupId);
+                          else next.add(groupId);
+                          return next;
+                        })}
+                      />
+                    );
+                  });
                 })()}
                 {getCourseEventsCount(course.name) === 0 && (
                    <p className="text-[10px] text-text-secondary italic text-center py-4">Nenhuma aula cadastrada.</p>

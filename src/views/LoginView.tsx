@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Lock, GraduationCap, Moon, Sun, LayoutDashboard, BarChart2 } from 'lucide-react';
+import { Mail, Lock, GraduationCap, Moon, Sun, ArrowRight, Monitor, Cpu, UserPlus } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -19,148 +19,225 @@ const LoginView = ({ setView }: { setView: (v: View) => void }) => {
     try {
       await login(formData);
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message === 'Invalid credentials' ? 'Credenciais inválidas' : err.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 flex bg-surface-container dark:bg-[#030b1a] z-[100] animate-in fade-in duration-700 transition-colors duration-500">
-      {/* Theme Toggle for Login */}
-      <div className="absolute top-8 right-8 z-50">
-        <button 
+    <div className="fixed inset-0 flex flex-col lg:flex-row bg-arctic-surface dark:bg-[#030b1a] z-[100] transition-colors duration-500 overflow-hidden">
+
+      {/* Botão de tema */}
+      <div className="absolute top-6 right-6 z-50">
+        <button
           onClick={toggleTheme}
-          className="p-3 bg-white/10 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-full text-text-primary/50 hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/10 transition-all backdrop-blur-md"
+          className="p-2.5 bg-card-bg/10 border border-outline-variant/20 rounded-full text-text-primary/60 hover:text-text-primary hover:bg-card-bg/20 transition-all backdrop-blur-xl"
         >
-          {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+          {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
         </button>
       </div>
 
-      {/* Circuit Pattern Background Effect */}
-      <div className="absolute inset-0 z-0 opacity-10 pointer-events-none" 
-           style={{ 
-             backgroundImage: `radial-gradient(circle at 2px 2px, ${theme === 'light' ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.05)'} 1px, transparent 0)`,
-             backgroundSize: '40px 40px' 
-           }} 
-      />
-      
-      {/* Decorative Glows */}
-      <div className="absolute top-1/4 -left-20 w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-0 -right-20 w-[500px] h-[500px] bg-indigo-600/5 rounded-full blur-[100px] pointer-events-none" />
+      {/* ── PAINEL ESQUERDO ── */}
+      <div className="hidden lg:flex w-1/2 bg-[#0a111f] flex-col justify-between border-r border-white/5 overflow-hidden">
 
-      {/* Left Content Area */}
-      <div className="hidden lg:flex w-[55%] relative z-10 flex-col justify-center p-24">
-        <div className="max-w-xl space-y-12">
-          <div className="flex items-center gap-5">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-blue-400 rounded-3xl flex items-center justify-center shadow-2xl shadow-blue-500/20">
-              <GraduationCap className="text-white w-10 h-10" />
-            </div>
-            <h1 className="text-4xl font-headline font-extrabold text-text-primary tracking-tight">EduEvent Pro</h1>
-          </div>
-          
-          <div className="space-y-6">
-            <h2 className="text-5xl font-headline font-bold text-text-primary leading-[1.1] tracking-tight">
-              Gerenciamento acadêmico de alta performance.
-            </h2>
-            <p className="text-xl text-text-secondary font-medium leading-relaxed max-w-lg">
-              Simplifique a organização de cursos, calendários e relatórios institucionais com uma interface desenhada para velocidade e precisão.
-            </p>
+        {/* Textos — topo esquerdo */}
+        <div className="flex flex-col gap-5 px-12 pt-10 relative z-10">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 bg-indigo-core/20 backdrop-blur-md px-4 py-2 rounded-full border border-indigo-core/30 w-fit">
+            <div className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse shadow-[0_0_8px_#818cf8]" />
+            <span className="text-[10px] font-mono text-indigo-200 font-bold tracking-[0.2em] uppercase">
+              SISTEMA.OPERACIONAL.OK
+            </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-6 pt-6">
-            <div className="p-8 rounded-[32px] bg-card-bg/40 border border-outline-variant backdrop-blur-md group hover:bg-card-bg/60 transition-all duration-500">
-              <LayoutDashboard className="text-secondary mb-6 group-hover:scale-110 transition-transform duration-500" size={32} />
-              <p className="text-sm font-bold text-text-primary uppercase tracking-[0.2em] font-headline">Painel Unificado</p>
-            </div>
-            <div className="p-8 rounded-[32px] bg-card-bg/40 border border-outline-variant backdrop-blur-md group hover:bg-card-bg/60 transition-all duration-500">
-              <BarChart2 className="text-secondary mb-6 group-hover:scale-110 transition-transform duration-500" size={32} />
-              <p className="text-sm font-bold text-text-primary uppercase tracking-[0.2em] font-headline">Relatórios em Tempo Real</p>
-            </div>
-          </div>
+          {/* Título */}
+          <motion.h1
+            initial={{ x: -40, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.6 }}
+            className="text-6xl xl:text-7xl font-headline font-black text-white leading-[0.95] tracking-tighter uppercase mt-6"
+          >
+            AGENDE SUAS<br />AULAS RÁPIDO.
+          </motion.h1>
+
+          {/* Descrição */}
+          <motion.p
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+            className="text-base text-white/60 font-medium leading-relaxed max-w-2xl"
+          >
+            Conecte seu departamento a uma rede unificada de inteligência.
+            Experimente o futuro da gestão acadêmica e otimize seu fluxo de agendamentos.
+          </motion.p>
         </div>
+
+        {/* Ilustração — meio do painel */}
+        <div className="w-full flex-shrink-0 flex-1 flex items-end">
+          <motion.img
+            initial={{ y: 40, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 1.2, ease: 'easeOut', delay: 0.1 }}
+            src="/images/auth-hero.png"
+            alt="Ilustração Acadêmica"
+            className="w-full h-auto object-contain object-bottom block"
+          />
+        </div>
+
+        {/* Stats HUD — abaixo da imagem */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.35 }}
+          className="flex gap-10 px-12 py-4 border-t border-white/10 flex-shrink-0"
+        >
+          <div className="space-y-1">
+            <p className="text-[10px] font-mono text-white/30 tracking-[0.2em] uppercase">Rede Global</p>
+            <p className="text-sm font-headline font-bold text-white tracking-wide">Conectado</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-[10px] font-mono text-white/30 tracking-[0.2em] uppercase">Status</p>
+            <p className="text-sm font-headline font-bold text-white tracking-wide">Operacional</p>
+          </div>
+        </motion.div>
       </div>
 
-      {/* Right Content Area - Card */}
-      <div className="flex-1 relative z-10 flex flex-col justify-center items-center p-8">
-        <motion.div 
+      {/* ── PAINEL DIREITO: Formulário ── */}
+      <div className="flex-1 relative bg-surface dark:bg-[#030b1a] p-8 lg:p-24 flex flex-col justify-center transition-colors duration-500">
+        {/* Grade sutil de fundo */}
+        <div
+          className="absolute inset-0 z-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none"
+          style={{
+            backgroundImage: `linear-gradient(to right, currentColor 1px, transparent 1px), linear-gradient(to bottom, currentColor 1px, transparent 1px)`,
+            backgroundSize: '60px 60px',
+          }}
+        />
+
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-lg bg-card-bg/80 dark:bg-white/[0.03] backdrop-blur-[40px] border border-outline-variant dark:border-white/[0.08] rounded-[56px] p-16 shadow-[0_48px_96px_-24px_rgba(3,11,26,0.3)] dark:shadow-[0_48px_96px_-24px_rgba(3,11,26,0.6)] space-y-12"
+          className="w-full max-w-lg mx-auto space-y-12 relative z-10"
         >
-          <header className="text-center space-y-4">
-            <h2 className="text-4xl font-headline font-bold text-text-primary tracking-tight">Boas-vindas</h2>
-            <p className="text-text-secondary text-lg font-medium opacity-60">Acesse sua conta administrativa para continuar.</p>
-          </header>
+          {/* Cabeçalho */}
+          <div className="space-y-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-indigo-core rounded-xl flex items-center justify-center shadow-lg shadow-indigo-core/20">
+                <GraduationCap className="text-white w-6 h-6" />
+              </div>
+              <span className="text-sm font-mono font-black uppercase tracking-[0.3em] text-text-primary/40">
+                EduEvent Pro
+              </span>
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-4xl font-headline font-bold text-text-primary tracking-tight">
+                Autenticação do Sistema
+              </h2>
+              <p className="text-text-secondary font-medium">
+                Inicie o protocolo de acesso institucional.
+              </p>
+            </div>
+          </div>
 
           {error && (
-            <motion.div 
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 text-red-500 text-sm font-bold text-center"
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex items-center gap-3 text-red-500 text-sm font-bold"
             >
+              <Cpu size={18} className="animate-pulse" />
               {error}
             </motion.div>
           )}
 
           <form className="space-y-8" onSubmit={handleSubmit}>
-            <div className="space-y-4">
-              <label className="text-[10px] font-black text-text-secondary uppercase tracking-[0.4em] ml-2">E-mail Institucional</label>
-              <div className="relative group/field">
-                <Mail className="absolute left-6 top-1/2 -translate-y-1/2 text-text-secondary/30 group-focus-within/field:text-secondary transition-colors" size={20} />
-                <input 
-                  required
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  className="w-full h-16 bg-surface-container/50 dark:bg-white/[0.03] border border-outline-variant dark:border-white/[0.08] rounded-[24px] pl-16 pr-6 text-text-primary dark:text-white placeholder-text-secondary/20 focus:ring-4 focus:ring-secondary/20 focus:border-secondary transition-all font-medium text-lg outline-none" 
-                  placeholder="admin@uninta.edu.br" 
-                />
+            <div className="grid grid-cols-1 gap-8">
+              {/* E-mail */}
+              <div className="relative group">
+                <div className="absolute -top-3 left-4 bg-surface dark:bg-[#030b1a] px-2 z-10 transition-colors duration-500">
+                  <span className="text-[10px] font-mono font-black text-text-secondary/50 group-focus-within:text-indigo-core uppercase tracking-[0.2em]">
+                    E-mail Institucional
+                  </span>
+                </div>
+                <div className="relative">
+                  <Mail className="absolute left-6 top-1/2 -translate-y-1/2 text-text-secondary/30 group-focus-within:text-indigo-core transition-colors" size={18} />
+                  <input
+                    required
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="w-full h-16 bg-transparent border border-outline-variant/60 dark:border-white/10 rounded-xl pl-16 pr-6 text-text-primary dark:text-white placeholder-text-secondary/20 focus:ring-1 focus:ring-indigo-core focus:border-indigo-core transition-all font-medium text-lg outline-none"
+                    placeholder="admin@uninta.edu.br"
+                  />
+                </div>
               </div>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="flex justify-between items-center px-2">
-                <label className="text-[10px] font-black text-text-secondary uppercase tracking-[0.4em]">Senha</label>
-                <button type="button" className="text-[10px] font-black text-secondary hover:text-secondary-container transition-colors uppercase tracking-widest">Esqueceu a senha?</button>
-              </div>
-              <div className="relative group/field">
-                <Lock className="absolute left-6 top-1/2 -translate-y-1/2 text-text-secondary/30 group-focus-within/field:text-secondary transition-colors" size={20} />
-                <input 
-                  required
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({...formData, password: e.target.value})}
-                  className="w-full h-16 bg-surface-container/50 dark:bg-white/[0.03] border border-outline-variant dark:border-white/[0.08] rounded-[24px] pl-16 pr-6 text-text-primary dark:text-white placeholder-text-secondary/20 focus:ring-4 focus:ring-secondary/20 focus:border-secondary transition-all font-medium text-lg outline-none" 
-                  placeholder="••••••••" 
-                />
+
+              {/* Senha */}
+              <div className="relative group">
+                <div className="absolute -top-3 left-4 bg-surface dark:bg-[#030b1a] px-2 z-10 transition-colors duration-500">
+                  <span className="text-[10px] font-mono font-black text-text-secondary/50 group-focus-within:text-indigo-core uppercase tracking-[0.2em]">
+                    Chave de Acesso
+                  </span>
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-6 top-1/2 -translate-y-1/2 text-text-secondary/30 group-focus-within:text-indigo-core transition-colors" size={18} />
+                  <input
+                    required
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="w-full h-16 bg-transparent border border-outline-variant/60 dark:border-white/10 rounded-xl pl-16 pr-6 text-text-primary dark:text-white placeholder-text-secondary/20 focus:ring-1 focus:ring-indigo-core focus:border-indigo-core transition-all font-medium text-lg outline-none"
+                    placeholder="••••••••"
+                  />
+                </div>
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center">
+                  <button type="button" className="text-[10px] font-black text-indigo-core hover:text-indigo-core/80 transition-colors uppercase tracking-widest px-2">
+                    Recuperar
+                  </button>
+                </div>
               </div>
             </div>
 
-            <button 
+            <button
               type="submit"
-              disabled={loading} 
-              className="w-full h-16 bg-secondary-container hover:bg-secondary text-white rounded-[24px] font-bold shadow-[0_24px_48px_-12px_rgba(33,112,228,0.3)] transition-all text-xl active:scale-[0.98] group relative overflow-hidden"
+              disabled={loading}
+              className="w-full h-16 bg-indigo-core hover:bg-indigo-core/90 text-white rounded-xl font-mono font-black shadow-[0_20px_40px_-10px_rgba(33,112,228,0.3)] transition-all text-lg active:scale-[0.98] group relative overflow-hidden uppercase tracking-[0.2em]"
             >
-              <span className="relative z-10 uppercase tracking-widest">
-                {loading ? 'AUTENTICANDO...' : 'Entrar na conta'}
-              </span>
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+              <div className="relative z-10 flex items-center justify-center gap-3">
+                {loading ? 'Validando Protocolo...' : (
+                  <>
+                    Iniciar Sessão
+                    <ArrowRight className="group-hover:translate-x-1 transition-transform" size={20} />
+                  </>
+                )}
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
             </button>
           </form>
 
-          <footer className="text-center pt-8 border-t border-outline-variant space-y-10">
-            <p className="text-sm font-medium text-text-secondary">
-              Novo na plataforma? <button onClick={() => setView('signup')} className="text-text-primary font-bold hover:text-secondary transition-colors ml-1">Criar conta</button>
-            </p>
-            
-            <div className="flex flex-col items-center gap-8 text-text-secondary/40">
-              <div className="space-y-1">
-                <p className="text-[9px] font-mono tracking-[0.5em] uppercase font-black">Sistemas Acadêmicos Integrados v5.2.0</p>
-                <p className="text-[9px] font-mono tracking-[0.5em] uppercase font-black">© 2024 EduEvent Pro. Todos os direitos reservados.</p>
-              </div>
+          {/* Registro */}
+          <div className="pt-12 border-t border-outline-variant/30 space-y-6">
+            <div className="flex flex-col gap-4">
+              <p className="text-xs font-medium text-text-secondary text-center">
+                Não possui credenciais de acesso?
+              </p>
+              <button
+                onClick={() => setView('signup')}
+                className="w-full h-12 bg-surface-container dark:bg-white/5 border border-outline-variant/30 hover:border-indigo-core hover:text-indigo-core text-text-primary rounded-xl font-black transition-all flex items-center justify-center gap-3 group uppercase tracking-widest text-xs"
+              >
+                <UserPlus size={16} className="group-hover:scale-110 transition-transform" />
+                Solicitar Novo Acesso
+              </button>
             </div>
-          </footer>
+
+            <div className="flex justify-between items-center text-text-secondary/40">
+              <div className="flex items-center gap-2">
+                <Monitor size={14} />
+                <p className="text-[9px] font-mono tracking-[0.2em] uppercase font-bold">SAI v5.2.0-ESTÁVEL</p>
+              </div>
+              <p className="text-[9px] font-mono tracking-[0.2em] uppercase font-bold">© 2024</p>
+            </div>
+          </div>
         </motion.div>
       </div>
     </div>

@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useRealtimeCollection } from '../hooks/useRealtimeCollection';
-import { parseJsonArray, calculateTotalHours, getCourseStyle } from '../utils/index';
+import { parseJsonArray, calculateTotalHours, getCourseStyle, getEventConfirmationState } from '../utils/index';
 import { SkeletonCard } from '../components/Skeleton';
 import type { View, AcademicEvent, Notification, User, Course } from '../types';
 
@@ -34,10 +34,30 @@ const Dashboard = ({ setView, onEdit, onDelete }: { setView: (v: View) => void, 
 
   const isAdmin = user?.role === 'ADMIN';
 
-  const activeNotifications = notifications.filter(n => {
+  const activeNotifications = [...notifications.filter(n => {
     const twentyFourHoursAgo = Date.now() - 24 * 60 * 60 * 1000;
     return new Date(n.updatedAt || n.createdAt).getTime() > twentyFourHoursAgo;
-  });
+  })];
+
+  // (Item 3) Proactive Alerts generation for Teachers
+  if (!isAdmin) {
+    const teacherEvents = events.filter(e => e.teacher === user?.displayName);
+    const pendingEvents = teacherEvents.filter(e => getEventConfirmationState(e) === 'PENDING_CONFIRMATION');
+    pendingEvents.forEach(e => {
+      const eventDateTime = new Date(`${e.date}T${e.timeEnd || e.timeStart || '23:59'}:00`);
+      const diffDays = Math.ceil(Math.abs(Date.now() - eventDateTime.getTime()) / (1000 * 60 * 60 * 24));
+      if (diffDays >= 4 && diffDays < 5) {
+        activeNotifications.unshift({
+          id: `proactive-${e.id}`,
+          title: '⚠️ Confirmação Pendente Urgente!',
+          message: `Sua aula "${e.title}" será confirmada automaticamente amanhã. Acesse o painel para confirmar ou reagendar.`,
+          type: 'warning',
+          read: false,
+          createdAt: new Date().toISOString()
+        } as Notification);
+      }
+    });
+  }
 
   const userCourseIds = parseJsonArray(user?.courseId);
   const userCourseNames = courses.filter(c => userCourseIds.includes(c.id)).map(c => c.name);
@@ -107,6 +127,11 @@ const Dashboard = ({ setView, onEdit, onDelete }: { setView: (v: View) => void, 
   const maxCourseVal = Math.max(...courseDistribution.map(([, c]) => c as number), 1);
   const uniqueCourses = [...new Set(filteredEvents.map(e => e.course))].filter(Boolean) as string[];
 
+  // (Item 5) Gamification stats for teacher
+  const teacherEventsForStats = events.filter(e => e.teacher === user?.displayName);
+  const confirmedCount = teacherEventsForStats.filter(e => e.status === 'Confirmed' || e.status === 'Completed').length;
+  const confirmationRate = teacherEventsForStats.length > 0 ? Math.round((confirmedCount / teacherEventsForStats.length) * 100) : 100;
+  
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-12">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -129,6 +154,43 @@ const Dashboard = ({ setView, onEdit, onDelete }: { setView: (v: View) => void, 
         )}
       </div>
 
+      {/* GAMIFICATION BANNER FOR TEACHERS (Item 5) */}
+      {!isAdmin && (
+        <div className="bg-gradient-to-r from-secondary to-blue-600 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden group">
+          <div className="absolute -right-10 -bottom-10 opacity-10 group-hover:scale-110 transition-transform duration-700">
+             <TrendingUp size={150} />
+          </div>
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+               <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/30 shadow-inner">
+                  {confirmationRate >= 90 ? <Zap size={28} className="text-yellow-300" /> : <Clock size={28} className="text-white" />}
+               </div>
+               <div>
+                 <h2 className="text-lg font-black tracking-wide">
+                   {confirmationRate >= 90 ? 'Excelente trabalho, Mestre!' : 'Acompanhamento de Aulas'}
+                 </h2>
+                 <p className="text-sm text-white/80 font-medium">
+                   {confirmationRate >= 90 
+                     ? `Você está com um incrível índice de ${confirmationRate}% de aulas confirmadas no prazo!`
+                     : `Você confirmou ${confirmationRate}% das suas aulas. Fique atento aos prazos para manter seu índice alto.`}
+                 </p>
+               </div>
+            </div>
+            <div className="flex items-center gap-6 shrink-0 bg-black/10 px-6 py-3 rounded-xl border border-white/10">
+               <div className="text-center">
+                 <p className="text-[10px] font-bold uppercase tracking-widest text-white/70 mb-0.5">Aulas Realizadas</p>
+                 <p className="text-2xl font-black">{confirmedCount}</p>
+               </div>
+               <div className="w-px h-8 bg-white/20" />
+               <div className="text-center">
+                 <p className="text-[10px] font-bold uppercase tracking-widest text-white/70 mb-0.5">Horas Lecionadas</p>
+                 <p className="text-2xl font-black">{Number.isInteger(calculateTotalHours(teacherEventsForStats)) ? calculateTotalHours(teacherEventsForStats) : calculateTotalHours(teacherEventsForStats).toFixed(1)}h</p>
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
         <div className="col-span-1 md:col-span-2 relative overflow-hidden group rounded-2xl border border-outline-variant/50 bg-card-bg shadow-xs hover:shadow-md transition-shadow duration-300">
           <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-secondary/60 via-secondary/30 to-transparent rounded-t-2xl" />
@@ -141,7 +203,7 @@ const Dashboard = ({ setView, onEdit, onDelete }: { setView: (v: View) => void, 
                 </p>
                 <div className="flex items-baseline gap-2">
                   <span className="text-4xl font-bold font-headline text-text-primary leading-none tracking-tight">
-                    {teachingHours}
+                    {Number.isInteger(teachingHours) ? teachingHours : teachingHours.toFixed(1)}
                   </span>
                   <span className="text-sm font-medium text-text-secondary">hrs</span>
                 </div>
@@ -377,7 +439,8 @@ const Dashboard = ({ setView, onEdit, onDelete }: { setView: (v: View) => void, 
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className={`grid grid-cols-1 ${isAdmin ? 'lg:grid-cols-3 gap-8' : 'gap-5'}`}>
+        {isAdmin && (
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-card-bg rounded-3xl border border-outline-variant shadow-sm overflow-hidden transition-all">
             <div className="px-8 py-6 border-b border-outline-variant flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface-container/30">
@@ -525,8 +588,9 @@ const Dashboard = ({ setView, onEdit, onDelete }: { setView: (v: View) => void, 
             </div>
           </div>
         </div>
+        )}
 
-        <div className="space-y-6">
+        <div className={isAdmin ? "space-y-6" : "grid grid-cols-1 md:grid-cols-2 gap-5"}>
           <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-850 text-white p-7 rounded-3xl relative overflow-hidden shadow-xl border border-white/[0.04] group h-fit">
             <div className="relative z-10">
               <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center mb-5 backdrop-blur-md border">

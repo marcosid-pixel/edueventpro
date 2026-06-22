@@ -54,18 +54,18 @@ export const calculateTotalHours = (evs: AcademicEvent[]) => evs.reduce((sum, ev
 
 export const getCourseStyle = (courseName: string = '') => {
   const name = courseName.toLowerCase();
-  if (name.includes('biologia')) return { icon: Dna, color: 'text-green-600', bg: 'bg-green-500/10', border: 'border-green-500/20' };
-  if (name.includes('física') || name.includes('fisica')) return { icon: Atom, color: 'text-purple-600', bg: 'bg-purple-500/10', border: 'border-purple-500/20' };
-  if (name.includes('matemática') || name.includes('matematica')) return { icon: Calculator, color: 'text-blue-600', bg: 'bg-blue-500/10', border: 'border-blue-500/20' };
-  if (name.includes('química') || name.includes('quimica')) return { icon: Beaker, color: 'text-red-600', bg: 'bg-red-500/10', border: 'border-red-500/20' };
-  if (name.includes('medicina') || name.includes('saúde') || name.includes('enfermagem')) return { icon: Stethoscope, color: 'text-cyan-600', bg: 'bg-cyan-500/10', border: 'border-cyan-500/20' };
-  if (name.includes('tecnologia') || name.includes('computação') || name.includes('sistemas') || name.includes('análise')) return { icon: Cpu, color: 'text-indigo-600', bg: 'bg-indigo-500/10', border: 'border-indigo-500/20' };
-  if (name.includes('letras') || name.includes('literatura') || name.includes('inglês') || name.includes('português')) return { icon: Languages, color: 'text-amber-600', bg: 'bg-amber-500/10', border: 'border-amber-500/20' };
-  if (name.includes('história') || name.includes('geografia') || name.includes('social')) return { icon: Globe2, color: 'text-orange-600', bg: 'bg-orange-500/10', border: 'border-orange-500/20' };
-  if (name.includes('artes') || name.includes('design') || name.includes('arquitetura')) return { icon: Palette, color: 'text-pink-600', bg: 'bg-pink-500/10', border: 'border-pink-500/20' };
-  if (name.includes('direito')) return { icon: Scale, color: 'text-slate-600', bg: 'bg-slate-500/10', border: 'border-slate-500/20' };
-  if (name.includes('administração') || name.includes('economia') || name.includes('contábeis')) return { icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' };
-  return { icon: GraduationCap, color: 'text-secondary', bg: 'bg-secondary/5', border: 'border-secondary/10' };
+  if (name.includes('biologia')) return { icon: Dna, color: 'text-green-600', bg: 'bg-green-500/10', border: 'border-green-500/40', shadow: 'shadow-green-500/20' };
+  if (name.includes('física') || name.includes('fisica')) return { icon: Atom, color: 'text-purple-600', bg: 'bg-purple-500/10', border: 'border-purple-500/40', shadow: 'shadow-purple-500/20' };
+  if (name.includes('matemática') || name.includes('matematica')) return { icon: Calculator, color: 'text-blue-600', bg: 'bg-blue-500/10', border: 'border-blue-500/40', shadow: 'shadow-blue-500/20' };
+  if (name.includes('química') || name.includes('quimica')) return { icon: Beaker, color: 'text-red-600', bg: 'bg-red-500/10', border: 'border-red-500/40', shadow: 'shadow-red-500/20' };
+  if (name.includes('medicina') || name.includes('saúde') || name.includes('enfermagem')) return { icon: Stethoscope, color: 'text-cyan-600', bg: 'bg-cyan-500/10', border: 'border-cyan-500/40', shadow: 'shadow-cyan-500/20' };
+  if (name.includes('tecnologia') || name.includes('computação') || name.includes('sistemas') || name.includes('análise')) return { icon: Cpu, color: 'text-indigo-600', bg: 'bg-indigo-500/10', border: 'border-indigo-500/40', shadow: 'shadow-indigo-500/20' };
+  if (name.includes('letras') || name.includes('literatura') || name.includes('inglês') || name.includes('português')) return { icon: Languages, color: 'text-amber-600', bg: 'bg-amber-500/10', border: 'border-amber-500/40', shadow: 'shadow-amber-500/20' };
+  if (name.includes('história') || name.includes('geografia') || name.includes('social')) return { icon: Globe2, color: 'text-orange-600', bg: 'bg-orange-500/10', border: 'border-orange-500/40', shadow: 'shadow-orange-500/20' };
+  if (name.includes('artes') || name.includes('design') || name.includes('arquitetura')) return { icon: Palette, color: 'text-pink-600', bg: 'bg-pink-500/10', border: 'border-pink-500/40', shadow: 'shadow-pink-500/20' };
+  if (name.includes('direito')) return { icon: Scale, color: 'text-slate-600', bg: 'bg-slate-500/10', border: 'border-slate-500/40', shadow: 'shadow-slate-500/20' };
+  if (name.includes('administração') || name.includes('economia') || name.includes('contábeis')) return { icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-500/10', border: 'border-emerald-500/40', shadow: 'shadow-emerald-500/20' };
+  return { icon: GraduationCap, color: 'text-secondary', bg: 'bg-secondary/5', border: 'border-secondary/20', shadow: 'shadow-secondary/20' };
 };
 
 export const CATEGORY_COLORS = [
@@ -114,3 +114,26 @@ export async function apiDelete(path: string) {
   if (!res.ok) throw new Error((await res.json()).error || 'Erro na requisição');
   return res.json();
 }
+
+export const getEventConfirmationState = (event: AcademicEvent): 'FUTURE' | 'PENDING_CONFIRMATION' | 'AUTO_CONFIRMED' | 'CONFIRMED' | 'CANCELLED' => {
+  if (event.status === 'Cancelled') return 'CANCELLED';
+  if (event.status === 'Confirmed') return 'CONFIRMED';
+  
+  const eventDateStr = event.date; // YYYY-MM-DD
+  const eventTimeStr = event.timeEnd || event.timeStart || '23:59';
+  const eventDateTime = new Date(`${eventDateStr}T${eventTimeStr}:00`);
+  const now = new Date();
+  
+  if (now > eventDateTime) {
+    const diffTime = Math.abs(now.getTime() - eventDateTime.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays >= 5) {
+      return 'AUTO_CONFIRMED';
+    } else {
+      return 'PENDING_CONFIRMATION';
+    }
+  }
+  
+  return 'FUTURE';
+};

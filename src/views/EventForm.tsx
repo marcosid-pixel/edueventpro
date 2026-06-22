@@ -15,7 +15,8 @@ import {
   GraduationCap,
   Users,
   UserPlus,
-  Info as InfoIcon
+  Info as InfoIcon,
+  Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'react-hot-toast';
@@ -23,7 +24,7 @@ import { useAuth } from '../context/AuthContext';
 import { useRealtimeCollection } from '../hooks/useRealtimeCollection';
 import type { View, AcademicEvent, Course, User } from '../types';
 import { EVENT_CATEGORIES, ACADEMIC_COURSES } from '../constants';
-import { parseCategories, isTestMode, apiPost, parseJsonArray } from '../utils/index';
+import { parseCategories, isTestMode, apiPost, parseJsonArray, getEventConfirmationState } from '../utils/index';
 
 const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initialData?: AcademicEvent | null }) => {
   const { user } = useAuth();
@@ -62,10 +63,11 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
     date: initialData?.date || '',
     timeStart: initialData?.time?.split(' - ')[0] || '',
     timeEnd: initialData?.time?.split(' - ')[1] || '',
-    location: initialData?.location || 'Meet',
+    location: initialData?.location || 'Campus',
     cabinInfo: initialData?.cabinInfo || '',
     speaker: initialData?.speaker || '',
     plataforma_meet: initialData?.plataforma_meet || false,
+    meetLink: initialData?.meetLink || '',
     plataforma_comapos: initialData?.plataforma_comapos || false,
     convidado_externo: initialData?.convidado_externo || false,
     precisa_cabine: initialData?.precisa_cabine || false,
@@ -201,6 +203,7 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
           notificar_admin: isProfessor && isEditing ? 1 : 0,
           updatedAt: new Date().toISOString(),
           plataforma_meet: formData.plataforma_meet ? 1 : 0,
+          meetLink: formData.meetLink || null,
           plataforma_comapos: formData.plataforma_comapos ? 1 : 0,
           convidado_externo: formData.convidado_externo ? 1 : 0,
           precisa_cabine: formData.precisa_cabine ? 1 : 0,
@@ -401,6 +404,22 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
                 </button>
               ) : (
                 <>
+                  {getEventConfirmationState(initialData) === 'PENDING_CONFIRMATION' && (
+                    <button
+                      onClick={async () => {
+                         try {
+                           setLoading(true);
+                           const response = await fetch(`/api/events_update/${initialData.id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'Confirmed' }) });
+                           if (!response.ok) throw new Error();
+                           toast('Aula confirmada com sucesso!');
+                           setView('unified-calendar');
+                         } catch (err) { toast('Erro ao confirmar aula'); } finally { setLoading(false); }
+                      }}
+                      className="px-6 py-2 bg-green-500/10 text-green-600 border border-green-500/20 font-bold text-xs rounded-lg hover:bg-green-500/20 transition-all font-headline tracking-wide uppercase flex items-center gap-2"
+                    >
+                      <Check size={14} /> Confirmar Aula
+                    </button>
+                  )}
                   <button
                     onClick={() => setShowCancelModal(true)}
                     className="px-6 py-2 bg-orange-500/10 text-orange-600 border border-orange-500/20 font-bold text-xs rounded-lg hover:bg-orange-500/20 transition-all font-headline tracking-wide uppercase flex items-center gap-2"
@@ -923,9 +942,19 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
                       <option value="">Selecione um professor...</option>
                       {users
                         .filter(u => {
+                          if (u.role === 'ADMIN') return true;
+                          
+                          const courseIdStr = u.courseId ? String(u.courseId) : '';
                           const course = courses.find(c => c.name === formData.course);
-                          return parseJsonArray(u.courseId).includes(course?.id || '') || u.role === 'ADMIN';
+                          
+                          // Check robustly if the user is assigned to this course (by ID or Name)
+                          // This also covers cases where the course exists dynamically (string name) but not in the DB
+                          const matchesName = formData.course && courseIdStr.toLowerCase().includes(formData.course.toLowerCase());
+                          const matchesId = course && courseIdStr.includes(course.id);
+                          
+                          return matchesName || matchesId;
                         })
+                        .sort((a, b) => a.displayName.localeCompare(b.displayName))
                         .map(u => (
                           <option key={u.id} value={u.displayName}>{u.displayName} ({u.role})</option>
                         ))
@@ -1065,6 +1094,17 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
                         <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${formData.plataforma_meet ? 'left-6' : 'left-1'}`} />
                       </div>
                     </button>
+                    {formData.plataforma_meet && (
+                      <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                        <input 
+                          type="url"
+                          placeholder="Cole o link do Google Meet aqui (ex: https://meet.google.com/abc-defg-hij)..."
+                          value={formData.meetLink}
+                          onChange={(e) => setFormData({...formData, meetLink: e.target.value})}
+                          className="w-full h-11 border border-outline-variant rounded-lg bg-card-bg px-3 text-sm focus:ring-2 focus:ring-secondary-container outline-none text-text-primary"
+                        />
+                      </div>
+                    )}
                     <button 
                       onClick={() => setFormData({...formData, plataforma_comapos: !formData.plataforma_comapos})}
                       className={`flex items-center justify-between p-3 border rounded-xl transition-all ${formData.plataforma_comapos ? 'border-secondary bg-secondary/5 text-secondary' : 'border-outline-variant text-text-secondary hover:bg-surface-container'}`}

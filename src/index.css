@@ -17,6 +17,8 @@
   --color-text-secondary: var(--text-secondary);
   --color-card-bg: var(--card-bg);
   --color-border-main: var(--border-main);
+  --color-arctic-surface: var(--arctic-surface);
+  --color-indigo-core: var(--indigo-core);
 }
 
 :root {
@@ -30,6 +32,8 @@
   --text-secondary: #49454f;
   --card-bg: #ffffff;
   --border-main: #e1e3e5;
+  --arctic-surface: #f7f9fb;
+  --indigo-core: #2170e4;
 }
 
 .dark {
@@ -43,6 +47,8 @@
   --text-secondary: #c6c6cd;
   --card-bg: #131b2e;
   --border-main: #2d3644;
+  --arctic-surface: #0a111f;
+  --indigo-core: #2170e4;
 }
 
 @layer base {

@@ -6,6 +6,8 @@ import { useTheme } from '../context/ThemeContext';
 import { useRealtimeCollection } from '../hooks/useRealtimeCollection';
 import type { View, Notification } from '../types';
 
+import { InstallPWA } from './InstallPWA';
+
 export const Header = ({ setView, currentView, onNewEvent }: { setView: (v: View) => void, currentView: View, onNewEvent: () => void }) => {
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -48,6 +50,7 @@ export const Header = ({ setView, currentView, onNewEvent }: { setView: (v: View
         </div>
       </div>
       <div className="flex items-center gap-6">
+        <InstallPWA />
         {user?.role === 'ADMIN' && (
           <button onClick={onNewEvent}
             className="hidden md:flex items-center gap-2 px-4 py-2 bg-secondary text-white rounded-lg text-xs font-bold uppercase tracking-wider hover:opacity-90 transition-all shadow-md active:scale-95"

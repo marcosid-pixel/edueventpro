@@ -56,7 +56,7 @@ const UserManagementView = () => {
            </div>
            <div className="px-4 py-1 text-center">
               <p className="text-[10px] font-black text-text-secondary uppercase">Horas Totais</p>
-              <p className="text-xl font-black text-secondary">{calculateTotalHours(events)}</p>
+              <p className="text-xl font-black text-secondary">{Number.isInteger(calculateTotalHours(events)) ? calculateTotalHours(events) : calculateTotalHours(events).toFixed(1)}</p>
            </div>
         </div>
       </div>
@@ -117,7 +117,7 @@ const UserManagementView = () => {
                 <div className="flex items-center gap-8 flex-wrap">
                   <div className="text-center md:text-right">
                     <p className="text-[10px] font-black text-text-secondary uppercase tracking-widest">Carga Horária</p>
-                    <p className="text-2xl font-black text-text-primary">{calculateTotalHours(userEvents)} <span className="text-xs font-bold text-text-secondary">hrs</span></p>
+                    <p className="text-2xl font-black text-text-primary">{Number.isInteger(calculateTotalHours(userEvents)) ? calculateTotalHours(userEvents) : calculateTotalHours(userEvents).toFixed(1)} <span className="text-xs font-bold text-text-secondary">hrs</span></p>
                   </div>
                   <div className="text-center md:text-right">
                     <p className="text-[10px] font-black text-red-500 uppercase tracking-widest">Faltas</p>
@@ -305,11 +305,11 @@ const UserManagementView = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                            <div className="space-y-3">
                               <div className="flex items-center justify-between px-2">
-                                 <span className="text-[9px] font-black text-blue-600 uppercase tracking-widest">Próximas Aulas</span>
-                                 <span className="text-[9px] font-bold text-text-secondary">{userEvents.filter(e => e.status !== 'Confirmed').length}</span>
+                                 <span className="text-[9px] font-black text-blue-600 uppercase tracking-widest">Próximas Aulas (Pendentes)</span>
+                                 <span className="text-[9px] font-bold text-text-secondary">{userEvents.filter(e => e.status === 'Scheduled').length}</span>
                               </div>
                               <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1 scrollbar-hide">
-                                 {userEvents.filter(e => e.status !== 'Confirmed').map(ev => (
+                                 {userEvents.filter(e => e.status === 'Scheduled').map(ev => (
                                    <div key={ev.id} className="p-3 bg-card-bg border border-outline-variant rounded-2xl flex items-center justify-between group/ev">
                                       <div className="flex items-center gap-3">
                                          <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0">
@@ -323,7 +323,7 @@ const UserManagementView = () => {
                                       <div className="w-2 h-2 rounded-full bg-orange-400" />
                                    </div>
                                  ))}
-                                 {userEvents.filter(e => e.status !== 'Confirmed').length === 0 && (
+                                 {userEvents.filter(e => e.status === 'Scheduled').length === 0 && (
                                    <div className="p-8 text-center border-2 border-dashed border-outline-variant rounded-2xl text-[10px] text-text-secondary italic">
                                      Nenhuma aula pendente.
                                    </div>
@@ -334,10 +334,10 @@ const UserManagementView = () => {
                            <div className="space-y-3">
                               <div className="flex items-center justify-between px-2">
                                  <span className="text-[9px] font-black text-green-600 uppercase tracking-widest">Histórico / Confirmadas</span>
-                                 <span className="text-[9px] font-bold text-text-secondary">{userEvents.filter(e => e.status === 'Confirmed').length}</span>
+                                 <span className="text-[9px] font-bold text-text-secondary">{userEvents.filter(e => e.status === 'Confirmed' || e.status === 'Completed').length}</span>
                               </div>
                               <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1 scrollbar-hide">
-                                 {userEvents.filter(e => e.status === 'Confirmed').map(ev => (
+                                 {userEvents.filter(e => e.status === 'Confirmed' || e.status === 'Completed').map(ev => (
                                    <div key={ev.id} className="p-3 bg-card-bg border border-outline-variant rounded-2xl flex items-center justify-between">
                                       <div className="flex items-center gap-3">
                                          <div className="w-8 h-8 rounded-lg bg-green-500/10 text-green-600 flex items-center justify-center shrink-0">
@@ -351,7 +351,7 @@ const UserManagementView = () => {
                                       <div className="w-2 h-2 rounded-full bg-green-500" />
                                    </div>
                                  ))}
-                                 {userEvents.filter(e => e.status === 'Confirmed').length === 0 && (
+                                 {userEvents.filter(e => e.status === 'Confirmed' || e.status === 'Completed').length === 0 && (
                                    <div className="p-8 text-center border-2 border-dashed border-outline-variant rounded-2xl text-[10px] text-text-secondary italic">
                                      Nenhuma aula concluída.
                                    </div>
