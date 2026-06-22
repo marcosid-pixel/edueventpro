@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Toaster, toast } from 'react-hot-toast';
-import { Plus, Bell, GraduationCap, X } from 'lucide-react';
+import { Plus, GraduationCap } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
 import { useTheme } from './context/ThemeContext';
 import { useRealtimeCollection } from './hooks/useRealtimeCollection';
@@ -29,9 +29,7 @@ export default function App() {
   const { theme } = useTheme();
   const [currentView, setView] = useState<View>('login');
   const [editingEvent, setEditingEvent] = useState<AcademicEvent | null>(null);
-  const [activeToast, setActiveToast] = useState<Notification | null>(null);
   const { data: globalNotifications } = useRealtimeCollection<Notification>('notifications');
-  const shownNotifications = useRef<Set<string>>(new Set());
 
   if (window.location.pathname === '/reset-password') {
     return <ResetPasswordView />;
@@ -44,13 +42,14 @@ export default function App() {
       );
       const latest = sorted[0];
       const diff = Date.now() - new Date(latest.createdAt).getTime();
-      const isNew = Math.abs(diff) < 15000; // Recente (janela de 15s) ignorando pequenos desvios de fuso
+      const isNew = Math.abs(diff) < 15000;
       
-      if (isNew && !shownNotifications.current.has(latest.id)) {
-        setActiveToast(latest);
-        shownNotifications.current.add(latest.id);
-        const timer = setTimeout(() => setActiveToast(null), 8000);
-        return () => clearTimeout(timer);
+      const shownIds = JSON.parse(localStorage.getItem('shownNotifs') || '[]');
+      
+      if (isNew && !shownIds.includes(latest.id)) {
+        toast(latest.title + '\n' + latest.message, { icon: '🔔', duration: 8000 });
+        shownIds.push(latest.id);
+        localStorage.setItem('shownNotifs', JSON.stringify(shownIds.slice(-50)));
       }
     }
   }, [globalNotifications]);
@@ -174,28 +173,6 @@ export default function App() {
           </motion.div>
         </AnimatePresence>
       </main>
-      <AnimatePresence>
-        {activeToast && currentView !== 'login' && currentView !== 'signup' && (
-          <motion.div
-            initial={{ opacity: 0, x: 100, scale: 0.9 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: 100, scale: 0.9 }}
-            className="fixed top-20 right-8 z-[100] w-80 bg-card-bg border-2 border-secondary shadow-[0_20px_50px_rgba(var(--secondary),0.2)] rounded-2xl p-4 flex gap-4 items-start backdrop-blur-md"
-          >
-            <div className="p-2.5 rounded-xl bg-secondary/10 text-secondary shadow-inner">
-              <Bell size={20} className="animate-bounce" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-black text-text-primary uppercase tracking-wider">{activeToast.title}</p>
-              <p className="text-[10px] text-text-secondary mt-1 line-clamp-2 italic font-medium leading-relaxed">{activeToast.message}</p>
-              <p className="text-[8px] font-black text-secondary mt-2 uppercase tracking-tighter">Agora mesmo • EduEvent Live</p>
-            </div>
-            <button onClick={() => setActiveToast(null)} className="text-text-secondary hover:text-red-500 transition-colors p-1">
-              <X size={16} />
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
       {currentView !== 'login' && user?.role === 'ADMIN' && (
         <div className="fixed bottom-6 right-8 z-[60]">
           <button onClick={handleNewEvent}
