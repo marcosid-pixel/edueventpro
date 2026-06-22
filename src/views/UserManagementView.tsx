@@ -8,7 +8,8 @@ import {
   Info,
   Calendar,
   Clock,
-  CheckCircle2
+  CheckCircle2,
+  KeyRound
 } from 'lucide-react';
 import { User as UserIcon, AlertCircle as AlertIcon } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -33,6 +34,31 @@ const UserManagementView = () => {
         body: JSON.stringify({ [field]: value })
       });
     } catch (err) { console.error(err); }
+  };
+
+  const handleResetPassword = async (userId: string, userName: string) => {
+    const newPassword = prompt(`Defina uma nova senha para o usuário ${userName} (mínimo 6 caracteres):`);
+    if (!newPassword) return;
+    if (newPassword.length < 6) {
+      toast.error('A senha deve ter no mínimo 6 caracteres.');
+      return;
+    }
+    
+    try {
+      const res = await fetch('/api/auth/reset-user-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, newPassword })
+      });
+      const data = await res.json();
+      if (data.error) {
+        toast.error(data.error);
+      } else {
+        toast.success(`Senha de ${userName} atualizada com sucesso!`);
+      }
+    } catch (err) {
+      toast.error('Erro ao redefinir a senha.');
+    }
   };
 
   const logs = [...activityLogs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -263,6 +289,15 @@ const UserManagementView = () => {
                              Este docente é responsável por <span className="font-bold text-text-primary">{userEvents.length} eventos</span>. 
                              A taxa de aulas confirmadas está em <span className="font-bold text-text-primary">{Math.round((userEvents.filter(e => e.status === 'Confirmed').length / (userEvents.length || 1)) * 100)}%</span>.
                            </p>
+                        </div>
+
+                        <div className="pt-2">
+                           <button 
+                             onClick={() => handleResetPassword(u.id, u.displayName)}
+                             className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 rounded-xl text-xs font-black transition-colors"
+                           >
+                             <KeyRound size={14} /> REDEFINIR SENHA DO USUÁRIO
+                           </button>
                         </div>
                       </div>
 

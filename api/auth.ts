@@ -101,6 +101,30 @@ router.get("/me", async (req, res) => {
   }
 });
 
+router.post("/reset-user-password", async (req, res) => {
+  if (!req.session?.userId) {
+    return res.status(401).json({ error: "Não autenticado" });
+  }
+  try {
+    const adminCheck = await turso.execute("SELECT role FROM users WHERE id = ?", [req.session.userId]);
+    if ((adminCheck.rows[0] as any)?.role !== 'ADMIN') {
+      return res.status(403).json({ error: "Apenas administradores" });
+    }
+    
+    const { userId, newPassword } = req.body;
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ error: "A nova senha deve ter no mínimo 6 caracteres" });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await turso.execute("UPDATE users SET password = ? WHERE id = ?", [hashedPassword, userId]);
+    
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post("/logout", (req, res) => {
   if (req.session) req.session = null;
   res.json({ success: true });
