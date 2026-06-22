@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Mail, Lock, GraduationCap, Moon, Sun, ArrowRight, Monitor, Cpu, UserPlus } from 'lucide-react';
 import { motion } from 'motion/react';
+import { toast } from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import type { View } from '../types';
@@ -28,7 +29,7 @@ const LoginView = ({ setView }: { setView: (v: View) => void }) => {
 
   const handleRequestReset = async () => {
     if (!formData.email) {
-      import('react-hot-toast').then(({ toast }) => toast.error('Digite seu e-mail institucional primeiro para recuperar a senha.'));
+      toast.error('Digite seu e-mail institucional primeiro para recuperar a senha.');
       return;
     }
     setResetLoading(true);
@@ -39,9 +40,9 @@ const LoginView = ({ setView }: { setView: (v: View) => void }) => {
         body: JSON.stringify({ email: formData.email })
       });
       if (!res.ok) throw new Error('Erro ao solicitar');
-      import('react-hot-toast').then(({ toast }) => toast.success('Solicitação enviada! O administrador enviará um link para seu e-mail.'));
+      toast.success('Solicitação enviada! O administrador enviará um link para seu e-mail.');
     } catch (err) {
-      import('react-hot-toast').then(({ toast }) => toast.error('Erro ao enviar solicitação de recuperação.'));
+      toast.error('Erro ao enviar solicitação de recuperação.');
     } finally {
       setResetLoading(false);
     }
