@@ -1,6 +1,6 @@
 import { LucideIcon } from 'lucide-react';
 
-export type View = 'dashboard' | 'dashboard-admin' | 'events' | 'unified-calendar' | 'controle-geral' | 'courses' | 'new-event' | 'speakers' | 'reports' | 'settings' | 'login' | 'signup' | 'users-admin' | 'logs';
+export type View = 'dashboard' | 'dashboard-admin' | 'events' | 'unified-calendar' | 'controle-geral' | 'courses' | 'course-history' | 'new-event' | 'speakers' | 'reports' | 'settings' | 'login' | 'signup' | 'users-admin' | 'logs';
 
 export interface NavItem {
   id: View;

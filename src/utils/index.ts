@@ -137,3 +137,23 @@ export const getEventConfirmationState = (event: AcademicEvent): 'FUTURE' | 'PEN
   
   return 'FUTURE';
 };
+
+export const GRACE_PERIOD_DAYS = 5;
+
+export const isEventPastGracePeriod = (event: AcademicEvent): boolean => {
+  const eventDateStr = event.date;
+  const eventTimeStr = event.timeEnd || event.timeStart || '23:59';
+  const eventDateTime = new Date(`${eventDateStr}T${eventTimeStr}:00`);
+  const now = new Date();
+  const diffTime = Math.abs(now.getTime() - eventDateTime.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays >= GRACE_PERIOD_DAYS;
+};
+
+export const isEventExpired = (event: AcademicEvent): boolean => {
+  if (event.status === 'Cancelled') return false;
+  const state = getEventConfirmationState(event);
+  if (state === 'AUTO_CONFIRMED') return true;
+  if (state === 'CONFIRMED' && isEventPastGracePeriod(event)) return true;
+  return false;
+};

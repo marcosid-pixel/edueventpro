@@ -22,6 +22,7 @@ import SettingsView from './views/SettingsView';
 import LoginView from './views/LoginView';
 import SignupView from './views/SignupView';
 import LogsView from './views/LogsView';
+import CourseHistoryView from './views/CourseHistoryView';
 import ResetPasswordView from './views/ResetPasswordView';
 
 export default function App() {
@@ -143,6 +144,7 @@ export default function App() {
       case 'unified-calendar': return <UnifiedCalendar onEdit={startEdit} onDelete={effectiveRole === 'ADMIN' ? handleDelete : undefined} />;
       case 'events': return <EventList onEdit={startEdit} onDelete={effectiveRole === 'ADMIN' ? handleDelete : undefined} />;
       case 'courses': return <CourseManagementView onEditEvent={startEdit} setView={setView} />;
+      case 'course-history': return <CourseHistoryView setView={handleSetView} onEdit={startEdit} />;
       case 'users-admin': return effectiveRole === 'ADMIN' ? <UserManagementView /> : <Dashboard setView={handleSetView} />;
       case 'speakers': return <SpeakerView />;
       case 'reports': return effectiveRole === 'ADMIN' ? <ReportsView /> : <Dashboard setView={handleSetView} />;

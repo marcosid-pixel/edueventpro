@@ -19,11 +19,11 @@ import { useAuth } from '../context/AuthContext';
 import { useRealtimeCollection } from '../hooks/useRealtimeCollection';
 import { SkeletonCard } from '../components/Skeleton';
 import { ModernSelectionModal } from '../components/ModernSelectionModal';
-import { parseCategories, parseJsonArray, getCourseStyle, getCategoryStyle, calculateTotalHours, getEventHours, getEventConfirmationState } from '../utils/index';
+import { parseCategories, parseJsonArray, getCourseStyle, getCategoryStyle, calculateTotalHours, getEventHours, getEventConfirmationState, isEventExpired } from '../utils/index';
 import { EVENT_CATEGORIES } from '../constants';
 import type { View, AcademicEvent, Course, User, Notification } from '../types';
 
-const EventGroupItem: React.FC<{ groupId: string; title: string; evs: AcademicEvent[]; onEditEvent?: (e: AcademicEvent) => void; isExpanded: boolean; onToggle: () => void }> = ({ groupId, title, evs, onEditEvent, isExpanded, onToggle }) => {
+const EventGroupItem: React.FC<{ groupId: string; title: string; evs: AcademicEvent[]; onEditEvent?: (e: AcademicEvent) => void; isExpanded: boolean; onToggle: () => void; isAdmin?: boolean }> = ({ groupId, title, evs, onEditEvent, isExpanded, onToggle, isAdmin }) => {
   const sortedEvs = [...evs].sort((a, b) => a.date.localeCompare(b.date));
   
   return (
@@ -101,6 +101,18 @@ const EventGroupItem: React.FC<{ groupId: string; title: string; evs: AcademicEv
                         ✔️ Confirmar Aula
                       </button>
                     )}
+                    {confirmState === 'AUTO_CONFIRMED' && isAdmin && (
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEditEvent?.(event);
+                        }}
+                        className="text-[8px] bg-amber-500 text-white px-2 py-0.5 rounded shadow hover:bg-amber-600 transition-all font-bold flex items-center gap-1 active:scale-95 ml-2"
+                        title="Reagendar Aula"
+                      >
+                        🔄 Reagendar
+                      </button>
+                    )}
                   </span>
                 </div>
                 <div className="text-right shrink-0">
@@ -133,10 +145,13 @@ const CourseManagementView = ({ onEditEvent, setView }: { onEditEvent?: (e: Acad
   const [expandedCourseGroups, setExpandedCourseGroups] = useState<Set<string>>(new Set());
   const [selectionModal, setSelectionModal] = useState<{ type: 'teacher' | 'category' | 'batch-teacher' | 'batch-category'; courseName?: string; courseId?: string; batchId?: string; batchTitle?: string } | null>(null);
 
-  // Professores só veem eventos onde são o teacher ou o criador
+  // Professores só veem eventos onde são o teacher ou o criador, e NÃO expirados
   const baseEvents = isAdmin
     ? allEvents
-    : allEvents.filter(e => e.teacher === user?.displayName || e.createdBy === user?.id);
+    : allEvents.filter(e => {
+        if (isEventExpired(e)) return false;
+        return e.teacher === user?.displayName || e.createdBy === user?.id;
+      });
 
   const events = globalBatchTeacher !== 'Todos'
     ? baseEvents.filter(e => e.teacher === globalBatchTeacher || e.createdBy === globalBatchTeacher)
@@ -538,6 +553,8 @@ const CourseManagementView = ({ onEditEvent, setView }: { onEditEvent?: (e: Acad
                             else if (confirmState === 'CANCELLED') statusDot = 'bg-red-500';
                             else if (confirmState === 'PENDING_CONFIRMATION') statusDot = 'bg-orange-500 animate-pulse';
 
+                            const expired = isEventExpired(ev);
+
                             return (
                             <div
                               key={ev.id}
@@ -548,7 +565,7 @@ const CourseManagementView = ({ onEditEvent, setView }: { onEditEvent?: (e: Acad
                               <span className="text-[10px] font-mono text-text-secondary shrink-0 tabular-nums">
                                 {new Date(ev.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
                               </span>
-                              <span className="text-[10px] font-bold text-text-primary truncate group-hover/event:text-secondary transition-colors">
+                              <span className={`text-[10px] font-bold truncate group-hover/event:text-secondary transition-colors ${expired ? 'text-text-secondary line-through' : 'text-text-primary'}`}>
                                 {ev.title}
                               </span>
                               {confirmState === 'PENDING_CONFIRMATION' && (
@@ -564,6 +581,18 @@ const CourseManagementView = ({ onEditEvent, setView }: { onEditEvent?: (e: Acad
                                   title="Confirmar Realização"
                                 >
                                   ✔️ Confirmar Aula
+                                </button>
+                              )}
+                              {expired && isAdmin && (
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onEditEvent?.(ev);
+                                  }}
+                                  className="text-[8px] bg-amber-500 text-white px-2 py-0.5 rounded shadow hover:bg-amber-600 transition-all font-bold flex items-center gap-1 active:scale-95 ml-2"
+                                  title="Reagendar Aula"
+                                >
+                                  🔄 Reagendar
                                 </button>
                               )}
                               {ev.timeStart && <span className="text-[9px] text-text-secondary font-mono shrink-0 ml-auto">{ev.timeStart}</span>}
@@ -776,6 +805,7 @@ const CourseManagementView = ({ onEditEvent, setView }: { onEditEvent?: (e: Acad
                         evs={evs} 
                         onEditEvent={onEditEvent}
                         isExpanded={expandedCourseGroups.has(groupId)}
+                        isAdmin={isAdmin}
                         onToggle={() => setExpandedCourseGroups(prev => {
                           const next = new Set(prev);
                           if (next.has(groupId)) next.delete(groupId);

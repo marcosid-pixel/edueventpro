@@ -1,4 +1,4 @@
-import { LayoutDashboard, Calendar, GraduationCap, ShieldCheck, History, FileText, Settings, LogOut, Moon, Sun } from 'lucide-react';
+import { LayoutDashboard, Calendar, GraduationCap, ShieldCheck, History, FileText, Settings, LogOut, Moon, Sun, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import type { View, NavItem } from '../types';
@@ -17,6 +17,10 @@ export const Sidebar = ({ currentView, setView }: { currentView: View, setView: 
     navItems.push({ id: 'users-admin', label: 'Painel Admin', icon: ShieldCheck });
     navItems.push({ id: 'logs', label: 'Auditoria', icon: History });
     navItems.push({ id: 'reports', label: 'Relatórios', icon: FileText });
+  }
+
+  if (effectiveRole === 'PROFESSOR') {
+    navItems.push({ id: 'course-history', label: 'Histórico', icon: Clock });
   }
 
   if (currentView === 'login' || currentView === 'signup') return null;
