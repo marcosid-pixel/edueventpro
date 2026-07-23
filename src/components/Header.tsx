@@ -9,17 +9,16 @@ import type { View, Notification } from '../types';
 import { InstallPWA } from './InstallPWA';
 
 export const Header = ({ setView, currentView, onNewEvent }: { setView: (v: View) => void, currentView: View, onNewEvent: () => void }) => {
-  const { user, getEffectiveRole } = useAuth();
+  const { user, effectiveRole, simulatedRole } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { data: allNotifications, refresh: refreshNotifs } = useRealtimeCollection<Notification>('notifications');
-  const notifications = allNotifications.filter(n => getEffectiveRole() === 'ADMIN' ? true : n.userId === user?.id);
+  const notifications = allNotifications.filter(n => effectiveRole === 'ADMIN' ? true : n.userId === user?.id);
   const [showNotifications, setShowNotifications] = useState(false);
   const [profile, setProfile] = useState({
     displayName: user?.displayName || 'Usuário',
     photoURL: user?.photoURL || ""
   });
-  const effectiveRole = getEffectiveRole();
-  const isSimulated = localStorage.getItem('testMode') === 'true';
+  const isSimulated = simulatedRole !== null;
 
   useEffect(() => {
     const fetchProfile = async () => {

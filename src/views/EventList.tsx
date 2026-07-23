@@ -6,8 +6,8 @@ import { useRealtimeCollection } from '../hooks/useRealtimeCollection';
 import { parseJsonArray } from '../utils/index';
 
 const EventList = ({ onEdit, onDelete }: { onEdit: (e: AcademicEvent) => void, onDelete: (id: string) => void }) => {
-  const { user, getEffectiveRole } = useAuth();
-  const isAdmin = getEffectiveRole() === 'ADMIN';
+  const { user, effectiveRole } = useAuth();
+  const isAdmin = effectiveRole === 'ADMIN';
   const { data: events } = useRealtimeCollection<AcademicEvent>('events');
   const { data: courses } = useRealtimeCollection<Course>('courses');
 

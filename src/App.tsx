@@ -25,12 +25,11 @@ import LogsView from './views/LogsView';
 import ResetPasswordView from './views/ResetPasswordView';
 
 export default function App() {
-  const { user, loading, getEffectiveRole } = useAuth();
+  const { user, loading, effectiveRole } = useAuth();
   const { theme } = useTheme();
   const [currentView, setView] = useState<View>('login');
   const [editingEvent, setEditingEvent] = useState<AcademicEvent | null>(null);
   const { data: globalNotifications } = useRealtimeCollection<Notification>('notifications');
-  const effectiveRole = getEffectiveRole();
 
   if (window.location.pathname === '/reset-password') {
     return <ResetPasswordView />;

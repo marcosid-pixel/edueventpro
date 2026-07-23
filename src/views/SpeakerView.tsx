@@ -5,11 +5,11 @@ import { useAuth } from '../context/AuthContext';
 import { useRealtimeCollection } from '../hooks/useRealtimeCollection';
 
 const SpeakerView = () => {
-  const { user, getEffectiveRole } = useAuth();
+  const { user, effectiveRole } = useAuth();
   const { data: speakers } = useRealtimeCollection<Speaker>('speakers');
   const { data: events } = useRealtimeCollection<AcademicEvent>('events');
 
-  const isAdmin = getEffectiveRole() === 'ADMIN';
+  const isAdmin = effectiveRole === 'ADMIN';
 
   const mySpeakers = isAdmin ? speakers : speakers.filter(s => s.createdBy === user?.id);
 

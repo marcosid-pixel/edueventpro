@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 export interface User {
   id: string;
@@ -19,21 +19,36 @@ interface AuthContextType {
   updateUser: (data: Partial<User>) => void;
   simulatedRole: SimulatedRole;
   setSimulatedRole: (role: SimulatedRole) => void;
-  getEffectiveRole: () => string | undefined;
+  effectiveRole: string | undefined;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+function readEffectiveRole(userRole: string | undefined): string | undefined {
+  if (typeof window !== 'undefined') {
+    const testMode = localStorage.getItem('testMode') === 'true';
+    if (testMode) {
+      const role = localStorage.getItem('testModeRole');
+      if (role === 'ADMIN' || role === 'PROFESSOR') return role;
+    }
+  }
+  return userRole;
+}
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [simulatedRole, setSimulatedRoleState] = useState<SimulatedRole>(() => {
-    const saved = localStorage.getItem('testMode');
-    if (saved === 'true') {
-      return (localStorage.getItem('testModeRole') as SimulatedRole) || null;
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('testMode');
+      if (saved === 'true') {
+        return (localStorage.getItem('testModeRole') as SimulatedRole) || null;
+      }
     }
     return null;
   });
+
+  const effectiveRole = useMemo(() => readEffectiveRole(user?.role), [user?.role, simulatedRole]);
 
   const setSimulatedRole = useCallback((role: SimulatedRole) => {
     setSimulatedRoleState(role);
@@ -45,11 +60,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.removeItem('testModeRole');
     }
   }, []);
-
-  const getEffectiveRole = useCallback((): string | undefined => {
-    if (simulatedRole) return simulatedRole;
-    return user?.role;
-  }, [simulatedRole, user?.role]);
 
   const fetchUser = async () => {
     try {
@@ -108,7 +118,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout, updateUser, simulatedRole, setSimulatedRole, getEffectiveRole }}>
+    <AuthContext.Provider value={{ user, loading, login, signup, logout, updateUser, simulatedRole, setSimulatedRole, effectiveRole }}>
       {!loading && children}
     </AuthContext.Provider>
   );

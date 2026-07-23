@@ -4,9 +4,8 @@ import { useTheme } from '../context/ThemeContext';
 import type { View, NavItem } from '../types';
 
 export const Sidebar = ({ currentView, setView }: { currentView: View, setView: (v: View) => void }) => {
-  const { user, logout, getEffectiveRole } = useAuth();
+  const { user, logout, effectiveRole } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const effectiveRole = getEffectiveRole();
 
   const navItems: NavItem[] = [
     { id: 'dashboard', label: 'Painel Geral', icon: LayoutDashboard },
