@@ -9,8 +9,8 @@ import { EVENT_CATEGORIES } from '../constants';
 import { parseJsonArray, getCourseStyle } from '../utils/index';
 
 const UnifiedCalendar = ({ onEdit, onDelete }: { onEdit: (e: AcademicEvent) => void, onDelete: (id: string) => void }) => {
-  const { user } = useAuth();
-  const isAdmin = user?.role === 'ADMIN';
+  const { user, getEffectiveRole } = useAuth();
+  const isAdmin = getEffectiveRole() === 'ADMIN';
   const { data: events } = useRealtimeCollection<AcademicEvent>('events');
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().substring(0, 7));
   const [typeFilter, setTypeFilter] = useState('Todos');
@@ -354,7 +354,7 @@ const UnifiedCalendar = ({ onEdit, onDelete }: { onEdit: (e: AcademicEvent) => v
                               </span>
                             </div>
                             <div className="flex flex-wrap gap-1">
-                              {(isAdmin || (user?.role === 'PROFESSOR' && event.teacher === user.displayName && userCourseNames.includes(event.course))) ? (
+                              {(isAdmin || (getEffectiveRole() === 'PROFESSOR' && event.teacher === user.displayName && userCourseNames.includes(event.course))) ? (
                                 <>
                                   {Boolean(event.plataforma_meet) && (
                                     <span className="text-[7px] bg-blue-500/10 text-blue-600 px-1 py-0.5 rounded uppercase font-black tracking-tighter border border-blue-500/20">Meet</span>

@@ -9,15 +9,17 @@ import type { View, Notification } from '../types';
 import { InstallPWA } from './InstallPWA';
 
 export const Header = ({ setView, currentView, onNewEvent }: { setView: (v: View) => void, currentView: View, onNewEvent: () => void }) => {
-  const { user } = useAuth();
+  const { user, getEffectiveRole } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { data: allNotifications, refresh: refreshNotifs } = useRealtimeCollection<Notification>('notifications');
-  const notifications = allNotifications.filter(n => user?.role === 'ADMIN' ? true : n.userId === user?.id);
+  const notifications = allNotifications.filter(n => getEffectiveRole() === 'ADMIN' ? true : n.userId === user?.id);
   const [showNotifications, setShowNotifications] = useState(false);
   const [profile, setProfile] = useState({
     displayName: user?.displayName || 'Usuário',
     photoURL: user?.photoURL || ""
   });
+  const effectiveRole = getEffectiveRole();
+  const isSimulated = localStorage.getItem('testMode') === 'true';
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -41,7 +43,15 @@ export const Header = ({ setView, currentView, onNewEvent }: { setView: (v: View
   if (currentView === 'login' || currentView === 'signup') return null;
 
   return (
-    <header className="fixed top-0 right-0 w-[calc(100%-260px)] h-16 bg-card-bg border-b border-outline-variant flex items-center justify-between px-8 z-40 transition-colors duration-300">
+    <header className={`fixed top-0 right-0 w-[calc(100%-260px)] bg-card-bg border-b border-outline-variant flex items-center justify-between px-8 z-40 transition-colors duration-300 ${isSimulated ? 'h-[88px]' : 'h-16'}`}>
+      {isSimulated && (
+        <div className="absolute top-0 left-0 right-0 h-6 bg-amber-500/15 border-b border-amber-500/20 flex items-center justify-center z-50">
+          <p className="text-[9px] font-black text-amber-700 uppercase tracking-widest flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
+            Modo Teste Ativo — Simulando: {effectiveRole === 'PROFESSOR' ? 'Professor(a)' : 'Administrador'}
+          </p>
+        </div>
+      )}
       <div className="flex items-center gap-4 flex-1">
         <div className="relative w-full max-w-md">
           <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-text-secondary">
@@ -139,7 +149,7 @@ export const Header = ({ setView, currentView, onNewEvent }: { setView: (v: View
             <p className="text-sm text-text-primary tracking-wide">
               Olá, <span className="font-medium">{profile.displayName}</span>
             </p>
-            <p className="text-[10px] text-text-secondary font-medium tracking-wider">{user?.role === 'ADMIN' ? 'Administrador' : 'Professor(a)'}</p>
+            <p className="text-[10px] text-text-secondary font-medium tracking-wider">{effectiveRole === 'ADMIN' ? 'Administrador' : 'Professor(a)'}</p>
           </div>
           <img alt="Perfil" onClick={() => setView('settings')}
             className="w-9 h-9 rounded-full border border-outline-variant object-cover cursor-pointer hover:ring-2 hover:ring-secondary-container transition-all"

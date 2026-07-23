@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { isTestMode, apiPatch } from '../utils/index';
 
 const SettingsView = () => {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, simulatedRole, setSimulatedRole } = useAuth();
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState({
     displayName: user?.displayName || '',
@@ -223,20 +223,88 @@ const SettingsView = () => {
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4">
-            <button
-              onClick={() => {
-                const currentMode = localStorage.getItem('testMode') === 'true';
-                const newMode = !currentMode;
-                localStorage.setItem('testMode', String(newMode));
-                toast(newMode ? 'Modo de testes ativado. Ações não vão gerar relatórios/auditoria.' : 'Modo de testes desativado. Ações voltarão a gerar relatórios.');
-                window.location.reload();
-              }}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 font-bold text-xs uppercase tracking-widest rounded-xl transition-all border ${localStorage.getItem('testMode') === 'true' ? 'bg-orange-500/10 text-orange-600 border-orange-500/20 shadow-inner' : 'bg-surface-container text-text-secondary border-outline-variant hover:border-text-primary hover:text-text-primary'}`}
-            >
-              <Settings size={16} />
-              {localStorage.getItem('testMode') === 'true' ? 'Modo Teste: ATIVADO' : 'Modo Teste: DESATIVADO'}
-            </button>
+          <div className="space-y-4">
+            <div className={`p-4 rounded-xl border transition-all ${simulatedRole ? 'bg-amber-50/50 border-amber-300/50' : 'bg-surface-container border-outline-variant'}`}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Settings size={16} className={simulatedRole ? 'text-amber-600' : 'text-text-secondary'} />
+                  <span className="text-xs font-bold text-text-primary uppercase tracking-wider">Modo Teste</span>
+                  {simulatedRole && (
+                    <span className="px-2 py-0.5 bg-amber-500/10 text-amber-600 text-[9px] font-black rounded-full border border-amber-500/20 uppercase">
+                      Simulando: {simulatedRole === 'PROFESSOR' ? 'Professor(a)' : 'Admin'}
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={() => {
+                    if (simulatedRole) {
+                      setSimulatedRole(null);
+                      toast('Modo teste desativado. Painel restaurado ao seu papel original.');
+                      window.location.reload();
+                    } else {
+                      setSimulatedRole('PROFESSOR');
+                      toast('Modo teste ativado. Visualizando como Professor(a). Abas e permissões foram ajustadas.');
+                      window.location.reload();
+                    }
+                  }}
+                  className={`relative w-12 h-6 rounded-full transition-all duration-300 ${simulatedRole ? 'bg-amber-500 shadow-inner' : 'bg-surface-container-hover border border-outline-variant'}`}
+                >
+                  <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-300 ${simulatedRole ? 'left-[26px]' : 'left-0.5'}`} />
+                </button>
+              </div>
+              <p className="text-[10px] text-text-secondary leading-relaxed">
+                {simulatedRole
+                  ? 'Você está visualizando o painel como um professor. As abas admin (Painel Admin, Auditoria, Relatórios) foram ocultadas e as permissões foram restringidas.'
+                  : 'Ative para simular a experiência de um professor. Ações não vão gerar relatórios/auditoria.'}
+              </p>
+
+              {simulatedRole && (
+                <div className="mt-3 pt-3 border-t border-amber-200/50">
+                  <p className="text-[9px] font-bold text-text-secondary uppercase tracking-widest mb-2">Simular como:</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setSimulatedRole('PROFESSOR');
+                        toast('Agora simulando como Professor(a)');
+                        window.location.reload();
+                      }}
+                      className={`flex-1 py-2 px-3 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all border ${
+                        simulatedRole === 'PROFESSOR'
+                          ? 'bg-blue-500/10 text-blue-600 border-blue-500/30 shadow-inner'
+                          : 'bg-surface-container text-text-secondary border-outline-variant hover:border-text-primary hover:text-text-primary'
+                      }`}
+                    >
+                      Professor(a)
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSimulatedRole('ADMIN');
+                        toast('Agora simulando como Administrador');
+                        window.location.reload();
+                      }}
+                      className={`flex-1 py-2 px-3 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all border ${
+                        simulatedRole === 'ADMIN'
+                          ? 'bg-orange-500/10 text-orange-600 border-orange-500/30 shadow-inner'
+                          : 'bg-surface-container text-text-secondary border-outline-variant hover:border-text-primary hover:text-text-primary'
+                      }`}
+                    >
+                      Administrador
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {!simulatedRole && (
+                <div className="mt-3 pt-3 border-t border-outline-variant">
+                  <p className="text-[9px] font-bold text-text-secondary uppercase tracking-widest mb-2">Papel ao ativar:</p>
+                  <div className="flex gap-2">
+                    <div className="flex-1 py-2 px-3 text-[10px] font-black uppercase tracking-wider rounded-lg bg-blue-500/10 text-blue-600 border border-blue-500/30 text-center">
+                      Professor(a) (padrão)
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <button
               onClick={async () => {
@@ -248,7 +316,7 @@ const SettingsView = () => {
                   toast('Erro ao limpar auditoria.');
                 }
               }}
-              className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-red-500/10 text-red-600 border border-red-500/20 font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-red-500/20 transition-all shadow-sm"
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-red-500/10 text-red-600 border border-red-500/20 font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-red-500/20 transition-all shadow-sm"
             >
               <Trash2 size={16} />
               Zerar Auditoria

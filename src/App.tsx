@@ -25,11 +25,12 @@ import LogsView from './views/LogsView';
 import ResetPasswordView from './views/ResetPasswordView';
 
 export default function App() {
-  const { user, loading } = useAuth();
+  const { user, loading, getEffectiveRole } = useAuth();
   const { theme } = useTheme();
   const [currentView, setView] = useState<View>('login');
   const [editingEvent, setEditingEvent] = useState<AcademicEvent | null>(null);
   const { data: globalNotifications } = useRealtimeCollection<Notification>('notifications');
+  const effectiveRole = getEffectiveRole();
 
   if (window.location.pathname === '/reset-password') {
     return <ResetPasswordView />;
@@ -138,18 +139,18 @@ export default function App() {
 
   const renderView = () => {
     switch (currentView) {
-      case 'dashboard': return <Dashboard setView={handleSetView} onEdit={startEdit} onDelete={user?.role === 'ADMIN' ? handleDelete : undefined} />;
-      case 'controle-geral': return <ScheduleHub onEdit={startEdit} onNewEvent={handleNewEvent} onDelete={user?.role === 'ADMIN' ? handleDelete : undefined} />;
-      case 'unified-calendar': return <UnifiedCalendar onEdit={startEdit} onDelete={user?.role === 'ADMIN' ? handleDelete : undefined} />;
-      case 'events': return <EventList onEdit={startEdit} onDelete={user?.role === 'ADMIN' ? handleDelete : undefined} />;
+      case 'dashboard': return <Dashboard setView={handleSetView} onEdit={startEdit} onDelete={effectiveRole === 'ADMIN' ? handleDelete : undefined} />;
+      case 'controle-geral': return <ScheduleHub onEdit={startEdit} onNewEvent={handleNewEvent} onDelete={effectiveRole === 'ADMIN' ? handleDelete : undefined} />;
+      case 'unified-calendar': return <UnifiedCalendar onEdit={startEdit} onDelete={effectiveRole === 'ADMIN' ? handleDelete : undefined} />;
+      case 'events': return <EventList onEdit={startEdit} onDelete={effectiveRole === 'ADMIN' ? handleDelete : undefined} />;
       case 'courses': return <CourseManagementView onEditEvent={startEdit} setView={setView} />;
-      case 'users-admin': return user?.role === 'ADMIN' ? <UserManagementView /> : <Dashboard setView={handleSetView} />;
+      case 'users-admin': return effectiveRole === 'ADMIN' ? <UserManagementView /> : <Dashboard setView={handleSetView} />;
       case 'speakers': return <SpeakerView />;
-      case 'reports': return user?.role === 'ADMIN' ? <ReportsView /> : <Dashboard setView={handleSetView} />;
+      case 'reports': return effectiveRole === 'ADMIN' ? <ReportsView /> : <Dashboard setView={handleSetView} />;
       case 'new-event': return <EventForm setView={handleSetView} initialData={editingEvent} />;
       case 'login': return <LoginView setView={handleSetView} />;
       case 'signup': return <SignupView setView={handleSetView} />;
-      case 'logs': return user?.role === 'ADMIN' ? <LogsView /> : <Dashboard setView={handleSetView} />;
+      case 'logs': return effectiveRole === 'ADMIN' ? <LogsView /> : <Dashboard setView={handleSetView} />;
       case 'settings': return <SettingsView />;
       default: return <Dashboard setView={handleSetView} />;
     }
@@ -173,7 +174,7 @@ export default function App() {
           </motion.div>
         </AnimatePresence>
       </main>
-      {currentView !== 'login' && user?.role === 'ADMIN' && (
+      {currentView !== 'login' && effectiveRole === 'ADMIN' && (
         <div className="fixed bottom-6 right-8 z-[60]">
           <button onClick={handleNewEvent}
             className="w-14 h-14 bg-black text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all group"

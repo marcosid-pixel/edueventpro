@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 
 export interface User {
   id: string;
@@ -8,6 +8,8 @@ export interface User {
   role?: string;
 }
 
+type SimulatedRole = 'ADMIN' | 'PROFESSOR' | null;
+
 interface AuthContextType {
   user: User | null;
   loading: boolean;
@@ -15,6 +17,9 @@ interface AuthContextType {
   signup: (data: any) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (data: Partial<User>) => void;
+  simulatedRole: SimulatedRole;
+  setSimulatedRole: (role: SimulatedRole) => void;
+  getEffectiveRole: () => string | undefined;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,6 +27,29 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [simulatedRole, setSimulatedRoleState] = useState<SimulatedRole>(() => {
+    const saved = localStorage.getItem('testMode');
+    if (saved === 'true') {
+      return (localStorage.getItem('testModeRole') as SimulatedRole) || null;
+    }
+    return null;
+  });
+
+  const setSimulatedRole = useCallback((role: SimulatedRole) => {
+    setSimulatedRoleState(role);
+    if (role) {
+      localStorage.setItem('testMode', 'true');
+      localStorage.setItem('testModeRole', role);
+    } else {
+      localStorage.removeItem('testMode');
+      localStorage.removeItem('testModeRole');
+    }
+  }, []);
+
+  const getEffectiveRole = useCallback((): string | undefined => {
+    if (simulatedRole) return simulatedRole;
+    return user?.role;
+  }, [simulatedRole, user?.role]);
 
   const fetchUser = async () => {
     try {
@@ -80,7 +108,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, loading, login, signup, logout, updateUser, simulatedRole, setSimulatedRole, getEffectiveRole }}>
       {!loading && children}
     </AuthContext.Provider>
   );

@@ -4,8 +4,9 @@ import { useTheme } from '../context/ThemeContext';
 import type { View, NavItem } from '../types';
 
 export const Sidebar = ({ currentView, setView }: { currentView: View, setView: (v: View) => void }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, getEffectiveRole } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const effectiveRole = getEffectiveRole();
 
   const navItems: NavItem[] = [
     { id: 'dashboard', label: 'Painel Geral', icon: LayoutDashboard },
@@ -13,7 +14,7 @@ export const Sidebar = ({ currentView, setView }: { currentView: View, setView: 
     { id: 'controle-geral', label: 'Controle de Eventos', icon: Calendar },
   ];
 
-  if (user?.role === 'ADMIN') {
+  if (effectiveRole === 'ADMIN') {
     navItems.push({ id: 'users-admin', label: 'Painel Admin', icon: ShieldCheck });
     navItems.push({ id: 'logs', label: 'Auditoria', icon: History });
     navItems.push({ id: 'reports', label: 'Relatórios', icon: FileText });

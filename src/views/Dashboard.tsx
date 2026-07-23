@@ -25,14 +25,14 @@ import { SkeletonCard } from '../components/Skeleton';
 import type { View, AcademicEvent, Notification, User, Course } from '../types';
 
 const Dashboard = ({ setView, onEdit, onDelete }: { setView: (v: View) => void, onEdit?: (e: AcademicEvent) => void, onDelete?: (id: string) => void }) => {
-  const { user } = useAuth();
+  const { user, getEffectiveRole } = useAuth();
   const { data: events, loading: eventsLoading } = useRealtimeCollection<AcademicEvent>('events');
   const { data: notifications } = useRealtimeCollection<Notification>('notifications');
   const { data: users, loading: usersLoading } = useRealtimeCollection<User>('users');
   const { data: courses } = useRealtimeCollection<Course>('courses');
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
-  const isAdmin = user?.role === 'ADMIN';
+  const isAdmin = getEffectiveRole() === 'ADMIN';
 
   const activeNotifications = [...notifications.filter(n => {
     const twentyFourHoursAgo = Date.now() - 24 * 60 * 60 * 1000;

@@ -27,7 +27,7 @@ import { EVENT_CATEGORIES, ACADEMIC_COURSES } from '../constants';
 import { parseCategories, isTestMode, apiPost, parseJsonArray, getEventConfirmationState } from '../utils/index';
 
 const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initialData?: AcademicEvent | null }) => {
-  const { user } = useAuth();
+  const { user, getEffectiveRole } = useAuth();
   const { data: courses } = useRealtimeCollection<Course>('courses');
   const { data: users } = useRealtimeCollection<User>('users');
   const { data: allEventsData } = useRealtimeCollection<AcademicEvent>('events');
@@ -78,8 +78,8 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
   });
 
   const isEditing = !!initialData;
-  const isAdmin = user?.role === 'ADMIN';
-  const isProfessor = user?.role === 'PROFESSOR';
+  const isAdmin = getEffectiveRole() === 'ADMIN';
+  const isProfessor = getEffectiveRole() === 'PROFESSOR';
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [rescheduleDate, setRescheduleDate] = useState('');
   const [cancelReason, setCancelReason] = useState('');

@@ -117,12 +117,12 @@ const EventGroupItem: React.FC<{ groupId: string; title: string; evs: AcademicEv
 };
 
 const CourseManagementView = ({ onEditEvent, setView }: { onEditEvent?: (e: AcademicEvent) => void; setView: (v: View) => void }) => {
-  const { user } = useAuth();
+  const { user, getEffectiveRole } = useAuth();
   const { data: courses, loading: coursesLoading } = useRealtimeCollection<Course>('courses');
   const { data: allEvents, loading: eventsLoading } = useRealtimeCollection<AcademicEvent>('events');
   const { data: users, loading: usersLoading } = useRealtimeCollection<User>('users');
   
-  const isAdmin = user?.role === 'ADMIN';
+  const isAdmin = getEffectiveRole() === 'ADMIN';
 
   const [loading, setLoading] = useState(false);
   const [activeCourseMenu, setActiveCourseMenu] = useState<string | null>(null);
