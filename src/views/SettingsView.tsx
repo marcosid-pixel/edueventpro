@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
 import { ChevronRight, Camera, AlertCircle, Settings, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { isTestMode, apiPatch } from '../utils/index';
@@ -9,7 +9,9 @@ const SettingsView = () => {
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState({
     displayName: user?.displayName || '',
-    photoURL: user?.photoURL || ''
+    photoURL: user?.photoURL || '',
+    workStart: user?.workStart || '09:00',
+    workEnd: user?.workEnd || '18:00'
   });
 
   useEffect(() => {
@@ -21,7 +23,9 @@ const SettingsView = () => {
         if (data) {
           setProfile({
             displayName: data.displayName || user.displayName || '',
-            photoURL: data.photoURL || user.photoURL || ''
+            photoURL: data.photoURL || user.photoURL || '',
+            workStart: data.workStart || user.workStart || '09:00',
+            workEnd: data.workEnd || user.workEnd || '18:00'
           });
         }
       } catch (err) {
@@ -143,6 +147,37 @@ const SettingsView = () => {
               className="w-full h-12 border border-outline-variant rounded-xl bg-surface-container px-4 focus:ring-2 focus:ring-secondary-container outline-none transition-all font-medium text-text-primary" 
               placeholder="Ex: Prof. Ricardo" 
             />
+          </div>
+
+          <div className="bg-slate-900 rounded-xl p-5 space-y-4">
+            <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/70">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+              Horário de Trabalho
+            </h3>
+            <p className="text-[10px] text-white/50">Define o teu horário habitual de trabalho. Isto afeta as tuas estatísticas no painel.</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-white/70 uppercase tracking-wider ml-1">Início</label>
+                <input 
+                  type="time"
+                  value={profile.workStart}
+                  onChange={(e) => setProfile({...profile, workStart: e.target.value})}
+                  className="w-full h-11 border border-white/20 rounded-lg bg-white/10 px-3 text-sm focus:ring-2 focus:ring-secondary-container outline-none text-white font-bold"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-white/70 uppercase tracking-wider ml-1">Fim</label>
+                <input 
+                  type="time"
+                  value={profile.workEnd}
+                  onChange={(e) => setProfile({...profile, workEnd: e.target.value})}
+                  className="w-full h-11 border border-white/20 rounded-lg bg-white/10 px-3 text-sm focus:ring-2 focus:ring-secondary-container outline-none text-white font-bold"
+                />
+              </div>
+            </div>
           </div>
 
           <div className="pt-4">

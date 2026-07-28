@@ -2,22 +2,21 @@ import express from "express";
 import bcrypt from "bcryptjs";
 import { turso } from "./db.js";
 import { z } from "zod";
-import nodemailer from "nodemailer";
+import { sendEmail, passwordResetEmail } from "./email.js";
 
 const router = express.Router();
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.SMTP_EMAIL || '',
-    pass: process.env.SMTP_PASSWORD || ''
-  }
-});
+import crypto from "crypto";
 
 const signupSchema = z.object({
   displayName: z.string().min(2),
   email: z.string().email(),
-  password: z.string().min(6),
+  password: z.string()
+    .min(8, "A senha deve ter no mínimo 8 caracteres")
+    .regex(/[A-Z]/, "A senha deve conter pelo menos uma letra maiúscula")
+    .regex(/[a-z]/, "A senha deve conter pelo menos uma letra minúscula")
+    .regex(/[0-9]/, "A senha deve conter pelo menos um número")
+    .regex(/[^A-Za-z0-9]/, "A senha deve conter pelo menos um caractere especial"),
 });
 
 const loginSchema = z.object({
@@ -44,13 +43,13 @@ router.post("/signup", async (req, res) => {
     res.json({ user: { id, displayName, email, role } });
   } catch (err: any) {
     if (err instanceof z.ZodError) {
-      return res.status(400).json({ error: (err as any).errors[0].message });
+      return res.status(400).json({ error: "Dados inválidos. Verifique os campos e tente novamente." });
     }
     const message = err.message || "";
     if (message.includes("UNIQUE")) {
       return res.status(400).json({ error: "Este e-mail já está em uso" });
     }
-    res.status(500).json({ error: `Erro no servidor: ${message}` });
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 });
 
@@ -60,7 +59,7 @@ router.post("/login", async (req, res) => {
     const { email, password } = validated;
 
     const result = await turso.execute(
-      "SELECT * FROM users WHERE email = ?",
+      "SELECT id, displayName, email, photoURL, role, workStart, workEnd, password FROM users WHERE email = ?",
       [email],
     );
     
@@ -83,9 +82,9 @@ router.post("/login", async (req, res) => {
     res.json({ user: userWithoutPassword });
   } catch (err: any) {
     if (err instanceof z.ZodError) {
-      return res.status(400).json({ error: (err as any).errors[0].message });
+      return res.status(400).json({ error: "Dados inválidos" });
     }
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 });
 
@@ -96,7 +95,7 @@ router.get("/me", async (req, res) => {
 
   try {
     const result = await turso.execute(
-      "SELECT id, displayName, email, photoURL, role FROM users WHERE id = ?",
+      "SELECT id, displayName, email, photoURL, role, workStart, workEnd FROM users WHERE id = ?",
       [req.session.userId],
     );
     
@@ -106,7 +105,7 @@ router.get("/me", async (req, res) => {
 
     res.json({ user: result.rows[0] });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 });
 
@@ -121,8 +120,8 @@ router.post("/reset-user-password", async (req, res) => {
     }
     
     const { userId, newPassword } = req.body;
-    if (!newPassword || newPassword.length < 6) {
-      return res.status(400).json({ error: "A nova senha deve ter no mínimo 6 caracteres" });
+    if (!newPassword || newPassword.length < 8) {
+      return res.status(400).json({ error: "A nova senha deve ter no mínimo 8 caracteres" });
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -130,7 +129,7 @@ router.post("/reset-user-password", async (req, res) => {
     
     res.json({ success: true });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 });
 
@@ -143,11 +142,11 @@ router.post("/request-reset", async (req, res) => {
 
     const user = result.rows[0] as any;
     
-    if (!process.env.SMTP_EMAIL || !process.env.SMTP_PASSWORD) {
-      return res.status(500).json({ error: "Servidor SMTP não configurado" });
+    if (!process.env.RESEND_API_KEY) {
+      return res.status(500).json({ error: "Servidor de e-mail não configurado" });
     }
 
-    const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    const token = crypto.randomUUID();
     await turso.execute("UPDATE users SET resetRequested = 0, resetToken = ? WHERE id = ?", [token, user.id]);
     
     let baseUrl = req.headers.origin || (req.headers.referer ? new URL(req.headers.referer).origin : 'http://localhost:3000');
@@ -155,26 +154,17 @@ router.post("/request-reset", async (req, res) => {
     
     const resetLink = `${baseUrl}/reset-password?token=${token}`;
     
-    await transporter.sendMail({
-      from: `"EduEvent Pro" <${process.env.SMTP_EMAIL}>`,
+    const emailHtml = passwordResetEmail(user.displayName, resetLink);
+
+    await sendEmail({
       to: user.email,
       subject: "Redefinição de Senha - EduEvent Pro",
-      html: `
-        <div style="font-family: sans-serif; padding: 20px;">
-          <h2>Olá, ${user.displayName}!</h2>
-          <p>Você solicitou a redefinição da sua senha no EduEvent Pro.</p>
-          <p>Clique no botão abaixo para criar sua nova senha com segurança:</p>
-          <a href="${resetLink}" style="display: inline-block; padding: 10px 20px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0;">
-            Criar Nova Senha
-          </a>
-          <p>Se você não solicitou isso, pode ignorar este e-mail. Este link é válido apenas para uma utilização.</p>
-        </div>
-      `
+      html: emailHtml
     });
 
     res.json({ success: true });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 });
 
@@ -189,38 +179,29 @@ router.post("/send-reset-link", async (req, res) => {
     if (userResult.rows.length === 0) return res.status(404).json({ error: "Usuário não encontrado" });
     const user = userResult.rows[0] as any;
 
-    if (!process.env.SMTP_EMAIL || !process.env.SMTP_PASSWORD) {
-      return res.status(500).json({ error: "Servidor SMTP não configurado no .env" });
+    if (!process.env.RESEND_API_KEY) {
+      return res.status(500).json({ error: "Servidor de e-mail não configurado no .env" });
     }
 
-    const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    const token = crypto.randomUUID();
     await turso.execute("UPDATE users SET resetRequested = 0, resetToken = ? WHERE id = ?", [token, userId]);
 
     // Use environment variable or localhost as fallback
     const baseUrl = process.env.CORS_ORIGIN || 'http://localhost:3000';
     const resetLink = `${baseUrl}/reset-password?token=${token}`;
     
-    await transporter.sendMail({
-      from: `"EduEvent Pro" <${process.env.SMTP_EMAIL}>`,
+    const emailHtml = passwordResetEmail(user.displayName, resetLink);
+
+    await sendEmail({
       to: user.email,
       subject: "Redefinição de Senha - EduEvent Pro",
-      html: `
-        <div style="font-family: sans-serif; padding: 20px;">
-          <h2>Olá, ${user.displayName}!</h2>
-          <p>Você (ou um administrador) solicitou a redefinição da sua senha no EduEvent Pro.</p>
-          <p>Clique no botão abaixo para criar sua nova senha com segurança:</p>
-          <a href="${resetLink}" style="display: inline-block; padding: 10px 20px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0;">
-            Criar Nova Senha
-          </a>
-          <p>Se você não solicitou isso, pode ignorar este e-mail. Este link é válido apenas para uma utilização.</p>
-        </div>
-      `
+      html: emailHtml
     });
 
     res.json({ success: true });
   } catch (err: any) {
     console.error("Erro ao enviar email:", err);
-    res.status(500).json({ error: "Falha ao enviar e-mail. Verifique suas credenciais do Gmail no .env" });
+    res.status(500).json({ error: "Falha ao enviar e-mail. Verifique a configuração RESEND_API_KEY no .env" });
   }
 });
 
@@ -240,7 +221,7 @@ router.post("/reset-password", async (req, res) => {
 
     res.json({ success: true });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 });
 

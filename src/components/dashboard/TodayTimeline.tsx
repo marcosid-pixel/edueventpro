@@ -5,9 +5,10 @@ import type { AcademicEvent } from '../../types';
 
 interface TodayTimelineProps {
   filteredEvents: AcademicEvent[];
+  className?: string;
 }
 
-const TodayTimeline = ({ filteredEvents }: TodayTimelineProps) => {
+const TodayTimeline = ({ filteredEvents, className = '' }: TodayTimelineProps) => {
   const now = new Date();
   const todayStr = now.toISOString().split('T')[0];
   const [selectedDate, setSelectedDate] = useState(todayStr);
@@ -56,8 +57,8 @@ const TodayTimeline = ({ filteredEvents }: TodayTimelineProps) => {
   const currentTimeTop = `${(currentMinutes / (10 * 60)) * 100}%`;
 
   return (
-    <div className="bg-card-bg rounded-2xl border border-outline-variant/50 p-5 shadow-xs">
-      <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider mb-4">Agenda de Hoje</h3>
+    <div className={`bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm ${className}`}>
+      <h3 className="text-xs font-bold text-slate-800 dark:text-white uppercase tracking-wider mb-4">Agenda de Hoje</h3>
 
       {/* Day Picker Pills */}
       <div className="flex items-center justify-between mb-5 px-1">
@@ -67,27 +68,24 @@ const TodayTimeline = ({ filteredEvents }: TodayTimelineProps) => {
             onClick={() => setSelectedDate(day.date)}
             className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all ${
               selectedDate === day.date
-                ? 'bg-secondary text-white shadow-md shadow-secondary/30 scale-105'
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200 dark:shadow-indigo-900/50 scale-105'
                 : day.isToday
-                  ? 'bg-secondary/10 text-secondary border border-secondary/20'
-                  : 'hover:bg-surface-container/60 text-text-secondary'
+                  ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700'
+                  : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400'
             }`}
           >
             <span className={`text-[9px] font-bold uppercase tracking-wider ${
               selectedDate === day.date ? 'text-white/80' : ''
             }`}>{day.dayName}</span>
             <span className={`text-sm font-black ${
-              selectedDate === day.date ? 'text-white' : day.isToday ? 'text-secondary' : 'text-text-primary'
+              selectedDate === day.date ? 'text-white' : day.isToday ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-800 dark:text-white'
             }`}>{day.dayNum}</span>
-            {day.isToday && selectedDate !== day.date && (
-              <span className="text-[8px] font-bold text-secondary">Sat</span>
-            )}
           </button>
         ))}
       </div>
 
       {/* Timeline */}
-      <div className="relative" style={{ height: `${timeSlots.length * 52}px` }}>
+      <div className="relative max-h-[450px] overflow-y-auto" style={{ height: `${timeSlots.length * 52}px` }}>
         {/* Time labels */}
         {timeSlots.map((time, i) => (
           <div
@@ -95,7 +93,7 @@ const TodayTimeline = ({ filteredEvents }: TodayTimelineProps) => {
             className="absolute left-0 w-12 flex items-start"
             style={{ top: `${i * 52}px` }}
           >
-            <span className="text-[10px] font-mono text-text-secondary/60 -mt-1.5">{time}</span>
+            <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 -mt-1.5">{time}</span>
           </div>
         ))}
 
@@ -103,7 +101,7 @@ const TodayTimeline = ({ filteredEvents }: TodayTimelineProps) => {
         {timeSlots.map((_, i) => (
           <div
             key={i}
-            className="absolute left-14 right-0 border-t border-outline-variant/30"
+            className="absolute left-14 right-0 border-t border-slate-200 dark:border-slate-700"
             style={{ top: `${i * 52}px` }}
           />
         ))}
@@ -140,7 +138,7 @@ const TodayTimeline = ({ filteredEvents }: TodayTimelineProps) => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className={`text-[11px] font-bold ${cs.color} line-clamp-1`}>{event.title}</p>
-                  <p className="text-[9px] text-text-secondary font-mono">
+                  <p className="text-[9px] text-slate-500 dark:text-slate-400 font-mono">
                     {event.timeStart} - {event.timeEnd || '--:--'}
                   </p>
                 </div>
@@ -152,7 +150,7 @@ const TodayTimeline = ({ filteredEvents }: TodayTimelineProps) => {
         {dayEvents.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center opacity-30">
-              <p className="text-xs text-text-secondary italic">Nenhum evento neste dia</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 italic">Nenhum evento neste dia</p>
             </div>
           </div>
         )}

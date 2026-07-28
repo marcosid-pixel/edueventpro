@@ -606,7 +606,7 @@ const ReportsView = () => {
                   {teachers.map(t => {
                     const tEvents = events.filter(e => e.teacher === t.displayName || e.createdBy === t.id);
                     const hrs = tEvents.reduce((sum, ev) => sum + getEventHours(ev), 0);
-                    const activeEvents = tEvents.filter(e => e.status === 'Confirmed').length;
+                    const activeEvents = tEvents.filter(e => e.status === 'Confirmed' || e.status === 'Scheduled').length;
                     const tLogs = logs.filter(log => {
                       const ev = events.find(e => e.id === log.eventId);
                       return (ev && ev.teacher === t.displayName) || log.userName === t.displayName;

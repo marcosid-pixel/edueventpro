@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Toaster, toast } from 'react-hot-toast';
-import { Plus, GraduationCap } from 'lucide-react';
+import { GraduationCap } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
 import { useTheme } from './context/ThemeContext';
 import { useRealtimeCollection } from './hooks/useRealtimeCollection';
 import type { View, AcademicEvent, Notification } from './types';
 import { isTestMode, apiPost } from './utils/index';
 import { Sidebar } from './components/Sidebar';
-import { Header } from './components/Header';
 import Dashboard from './views/Dashboard';
 import ScheduleHub from './views/ScheduleHub';
 import UnifiedCalendar from './views/UnifiedCalendar';
@@ -24,6 +23,7 @@ import SignupView from './views/SignupView';
 import LogsView from './views/LogsView';
 import CourseHistoryView from './views/CourseHistoryView';
 import ResetPasswordView from './views/ResetPasswordView';
+import ConfirmView from './views/ConfirmView';
 
 export default function App() {
   const { user, loading, effectiveRole } = useAuth();
@@ -34,6 +34,10 @@ export default function App() {
 
   if (window.location.pathname === '/reset-password') {
     return <ResetPasswordView />;
+  }
+
+  if (window.location.pathname.startsWith('/confirm/')) {
+    return <ConfirmView />;
   }
 
   useEffect(() => {
@@ -139,30 +143,31 @@ export default function App() {
 
   const renderView = () => {
     switch (currentView) {
-      case 'dashboard': return <Dashboard setView={handleSetView} onEdit={startEdit} onDelete={effectiveRole === 'ADMIN' ? handleDelete : undefined} />;
+      case 'dashboard': return <Dashboard setView={handleSetView} onNewEvent={handleNewEvent} onEdit={startEdit} onDelete={effectiveRole === 'ADMIN' ? handleDelete : undefined} />;
       case 'controle-geral': return <ScheduleHub onEdit={startEdit} onNewEvent={handleNewEvent} onDelete={effectiveRole === 'ADMIN' ? handleDelete : undefined} />;
       case 'unified-calendar': return <UnifiedCalendar onEdit={startEdit} onDelete={effectiveRole === 'ADMIN' ? handleDelete : undefined} />;
       case 'events': return <EventList onEdit={startEdit} onDelete={effectiveRole === 'ADMIN' ? handleDelete : undefined} />;
       case 'courses': return <CourseManagementView onEditEvent={startEdit} setView={setView} />;
       case 'course-history': return <CourseHistoryView setView={handleSetView} onEdit={startEdit} />;
-      case 'users-admin': return effectiveRole === 'ADMIN' ? <UserManagementView /> : <Dashboard setView={handleSetView} />;
+      case 'users-admin': return effectiveRole === 'ADMIN' ? <UserManagementView /> : <Dashboard setView={handleSetView} onNewEvent={handleNewEvent} />;
       case 'speakers': return <SpeakerView />;
-      case 'reports': return effectiveRole === 'ADMIN' ? <ReportsView /> : <Dashboard setView={handleSetView} />;
+      case 'reports': return effectiveRole === 'ADMIN' ? <ReportsView /> : <Dashboard setView={handleSetView} onNewEvent={handleNewEvent} />;
       case 'new-event': return <EventForm setView={handleSetView} initialData={editingEvent} />;
       case 'login': return <LoginView setView={handleSetView} />;
       case 'signup': return <SignupView setView={handleSetView} />;
-      case 'logs': return effectiveRole === 'ADMIN' ? <LogsView /> : <Dashboard setView={handleSetView} />;
+      case 'logs': return effectiveRole === 'ADMIN' ? <LogsView /> : <Dashboard setView={handleSetView} onNewEvent={handleNewEvent} />;
       case 'settings': return <SettingsView />;
-      default: return <Dashboard setView={handleSetView} />;
+      default: return <Dashboard setView={handleSetView} onNewEvent={handleNewEvent} />;
     }
   };
 
+  const isAuth = currentView === 'login' || currentView === 'signup';
+
   return (
-    <div className={`min-h-screen bg-surface transition-colors duration-300 ${theme === 'dark' ? 'dark' : ''}`}>
+    <div className={`min-h-screen bg-slate-50 flex flex-row font-sans transition-colors duration-300 ${theme === 'dark' ? 'dark' : ''}`}>
       <Toaster position="top-center" />
-      <Sidebar currentView={currentView} setView={handleSetView} />
-      <Header currentView={currentView} setView={handleSetView} onNewEvent={handleNewEvent} />
-      <main className={`transition-all duration-300 ${currentView !== 'login' && currentView !== 'signup' ? 'ml-[260px] pt-24 px-8 pb-12' : ''}`}>
+      {!isAuth && <Sidebar currentView={currentView} setView={handleSetView} />}
+      <main className={`flex-1 flex flex-col min-w-0 ${isAuth ? 'w-full' : 'pl-64'}`}>
         <AnimatePresence mode="wait">
           <motion.div
             key={currentView}
@@ -170,23 +175,12 @@ export default function App() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.3 }}
+            className="flex-1 flex flex-col min-h-screen"
           >
             {renderView()}
           </motion.div>
         </AnimatePresence>
       </main>
-      {currentView !== 'login' && effectiveRole === 'ADMIN' && (
-        <div className="fixed bottom-6 right-8 z-[60]">
-          <button onClick={handleNewEvent}
-            className="w-14 h-14 bg-black text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all group"
-          >
-            <Plus size={28} className="group-hover:rotate-90 transition-transform duration-300" />
-            <div className="absolute right-full mr-4 bg-black text-white text-[10px] font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl uppercase tracking-widest pointer-events-none">
-              Cadastro Rápido
-            </div>
-          </button>
-        </div>
-      )}
     </div>
   );
 }

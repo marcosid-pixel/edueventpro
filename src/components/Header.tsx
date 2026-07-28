@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Plus, Bell, CheckCircle2, Moon, Sun } from 'lucide-react';
+import { Search, Plus, Bell, CheckCircle2, Moon, Sun, FlaskConical } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useRealtimeCollection } from '../hooks/useRealtimeCollection';
@@ -9,11 +9,12 @@ import type { View, Notification } from '../types';
 import { InstallPWA } from './InstallPWA';
 
 export const Header = ({ setView, currentView, onNewEvent }: { setView: (v: View) => void, currentView: View, onNewEvent: () => void }) => {
-  const { user, effectiveRole, simulatedRole } = useAuth();
+  const { user, effectiveRole, simulatedRole, setSimulatedRole } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { data: allNotifications, refresh: refreshNotifs } = useRealtimeCollection<Notification>('notifications');
   const notifications = allNotifications.filter(n => effectiveRole === 'ADMIN' ? true : n.userId === user?.id);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showTestMenu, setShowTestMenu] = useState(false);
   const [profile, setProfile] = useState({
     displayName: user?.displayName || 'Usuário',
     photoURL: user?.photoURL || ""
@@ -42,7 +43,7 @@ export const Header = ({ setView, currentView, onNewEvent }: { setView: (v: View
   if (currentView === 'login' || currentView === 'signup') return null;
 
   return (
-    <header className={`fixed top-0 right-0 w-[calc(100%-260px)] bg-card-bg border-b border-outline-variant flex items-center justify-between px-8 z-40 transition-colors duration-300 ${isSimulated ? 'h-[88px]' : 'h-16'}`}>
+    <header className={`fixed top-0 left-[200px] right-0 w-auto bg-card-bg border-b border-outline-variant flex items-center justify-between px-8 z-40 transition-colors duration-300 ${isSimulated ? 'h-[88px]' : 'h-16'}`}>
       {isSimulated && (
         <div className="absolute top-0 left-0 right-0 h-6 bg-amber-500/15 border-b border-amber-500/20 flex items-center justify-center z-50">
           <p className="text-[9px] font-black text-amber-700 uppercase tracking-widest flex items-center gap-1.5">
@@ -67,6 +68,101 @@ export const Header = ({ setView, currentView, onNewEvent }: { setView: (v: View
           <Plus size={16} />
           Novo Agendamento
         </button>
+        
+        {/* Test Mode Toggle - Admin Only */}
+        {user?.role === 'ADMIN' && (
+          <div className="relative">
+            <button
+              onClick={() => setShowTestMenu(!showTestMenu)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all shadow-sm ${
+                isSimulated 
+                  ? 'bg-amber-500/15 text-amber-600 border border-amber-500/30 animate-pulse' 
+                  : 'bg-surface-container text-text-secondary hover:bg-surface-container/80 border border-outline-variant'
+              }`}
+              title={isSimulated ? `Simulando: ${simulatedRole === 'PROFESSOR' ? 'Professor(a)' : 'Admin'}` : 'Modo Teste'}
+            >
+              <FlaskConical size={16} />
+              <span className="hidden lg:inline">{isSimulated ? 'Teste' : 'Modo Teste'}</span>
+            </button>
+            <AnimatePresence>
+              {showTestMenu && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowTestMenu(false)} />
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute top-full right-0 mt-2 w-56 bg-card-bg border border-outline-variant shadow-2xl rounded-xl p-3 z-50"
+                  >
+                    <div className="flex items-center gap-2 mb-3 pb-2 border-b border-outline-variant">
+                      <FlaskConical size={14} className="text-amber-500" />
+                      <span className="text-[10px] font-bold text-text-primary uppercase tracking-wider">Modo Teste</span>
+                      {isSimulated && (
+                        <span className="ml-auto px-1.5 py-0.5 bg-amber-500/10 text-amber-600 text-[8px] font-black rounded-full">
+                          ATIVO
+                        </span>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <button
+                        onClick={() => {
+                          if (isSimulated) {
+                            setSimulatedRole(null);
+                            window.location.reload();
+                          } else {
+                            setSimulatedRole('PROFESSOR');
+                            window.location.reload();
+                          }
+                          setShowTestMenu(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all flex items-center gap-2 ${
+                          isSimulated 
+                            ? 'bg-red-500/10 text-red-600 hover:bg-red-500/20' 
+                            : 'bg-surface-container text-text-secondary hover:bg-surface-container/80'
+                        }`}
+                      >
+                        {isSimulated ? 'Desativar Modo Teste' : 'Ativar Modo Teste'}
+                      </button>
+                      {isSimulated && (
+                        <>
+                          <button
+                            onClick={() => {
+                              setSimulatedRole('PROFESSOR');
+                              window.location.reload();
+                              setShowTestMenu(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all ${
+                              simulatedRole === 'PROFESSOR'
+                                ? 'bg-blue-500/10 text-blue-600 border border-blue-500/30'
+                                : 'text-text-secondary hover:bg-surface-container'
+                            }`}
+                          >
+                            Simular: Professor(a)
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSimulatedRole('ADMIN');
+                              window.location.reload();
+                              setShowTestMenu(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all ${
+                              simulatedRole === 'ADMIN'
+                                ? 'bg-orange-500/10 text-orange-600 border border-orange-500/30'
+                                : 'text-text-secondary hover:bg-surface-container'
+                            }`}
+                          >
+                            Simular: Administrador
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+
         <div className="flex items-center gap-2 relative">
           <button onClick={toggleTheme} className="text-text-secondary hover:bg-surface-container p-2 rounded-full transition-colors">
             {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}

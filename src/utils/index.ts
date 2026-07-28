@@ -1,5 +1,12 @@
 import type { AcademicEvent } from '../types';
 import { EVENT_CATEGORIES } from '../constants';
+
+export function toLocalDateStr(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
 import { Dna, Atom, Calculator, Beaker, Stethoscope, Cpu, Languages, Globe2, Palette, Scale, TrendingUp, GraduationCap } from 'lucide-react';
 
 export const parseCategories = (cats: any) => {
@@ -156,4 +163,17 @@ export const isEventExpired = (event: AcademicEvent): boolean => {
   if (state === 'AUTO_CONFIRMED') return true;
   if (state === 'CONFIRMED' && isEventPastGracePeriod(event)) return true;
   return false;
+};
+
+export const canConfirmEvent = (event: AcademicEvent): boolean => {
+  if (event.status === 'Confirmed' || event.status === 'Cancelled') return false;
+  const eventDateStr = event.date;
+  const eventTimeStr = event.timeEnd || event.timeStart || '23:59';
+  const eventEndDateTime = new Date(`${eventDateStr}T${eventTimeStr}:00`);
+  const now = new Date();
+  const oneHourAfter = new Date(eventEndDateTime.getTime() + 60 * 60 * 1000);
+  if (now < oneHourAfter) return false;
+  const diffTime = Math.abs(now.getTime() - eventEndDateTime.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays < 5;
 };

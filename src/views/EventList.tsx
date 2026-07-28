@@ -91,10 +91,10 @@ const EventList = ({ onEdit, onDelete }: { onEdit: (e: AcademicEvent) => void, o
                   </td>
                   <td className="px-4">
                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold border
-                        ${event.status === 'Confirmed' ? 'bg-green-500/10 text-green-600 border-green-500/20' : 'bg-orange-500/10 text-orange-600 border-orange-500/20'}`}
+                        ${(event.status === 'Confirmed' || event.status === 'Scheduled') ? 'bg-green-500/10 text-green-600 border-green-500/20' : 'bg-orange-500/10 text-orange-600 border-orange-500/20'}`}
                       >
-                      <div className={`w-1.5 h-1.5 rounded-full ${event.status === 'Confirmed' ? 'bg-green-600' : 'bg-orange-600'}`}></div>
-                      {event.status === 'Confirmed' ? 'Confirmado' : event.status}
+                      <div className={`w-1.5 h-1.5 rounded-full ${(event.status === 'Confirmed' || event.status === 'Scheduled') ? 'bg-green-600' : 'bg-orange-600'}`}></div>
+                      {(event.status === 'Confirmed' || event.status === 'Scheduled') ? 'Confirmado' : event.status}
                     </span>
                   </td>
                   <td className="px-4 text-xs font-bold text-text-primary truncate max-w-[120px]">{event.course}</td>

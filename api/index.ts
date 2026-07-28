@@ -7,12 +7,13 @@ import rateLimit from "express-rate-limit";
 import { initDb } from "./db.js";
 import authRouter from "./auth.js";
 import apiRouter from "./api.js";
+import emailRouter from "./email-routes.js";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
 if (!process.env.SESSION_SECRET) {
-  throw new Error("SESSION_SECRET é obrigatório. Defina no arquivo .env");
+  console.error("SESSION_SECRET é obrigatório. Defina no arquivo .env");
 }
 
 app.use(cors({
@@ -22,11 +23,11 @@ app.use(cors({
 app.use(express.json());
 
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
-  message: { error: "Muitas tentativas de login. Tente novamente em 15 minutos." },
+  windowMs: 5 * 60 * 1000,
+  max: 10,
+  message: { error: "Muitas tentativas de login. Tente novamente em 5 minutos." },
 });
-// app.use("/api/auth/login", loginLimiter); // Desativado temporariamente para testes
+app.use("/api/auth/login", loginLimiter);
 
 // Session configuration
 app.use(
@@ -40,11 +41,12 @@ app.use(
   })
 );
 
-// Initialize DB
-initDb();
+// Initialize DB (fire and forget - não bloqueia requests)
+initDb().catch(err => console.error("DB init error:", err));
 
 // Routes
 app.use("/api/auth", authRouter);
+app.use("/api/emails", emailRouter);
 app.use("/api", apiRouter);
 
 // Vite / Static Files

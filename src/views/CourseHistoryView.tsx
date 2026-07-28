@@ -32,7 +32,7 @@ const CourseHistoryView = ({ setView, onEdit }: { setView: (v: View) => void, on
   }, {} as Record<string, AcademicEvent[]>);
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-12">
+    <div className="space-y-8 animate-in fade-in duration-500 pb-12 px-6">
       <div className="flex justify-between items-end">
         <div>
           <nav className="flex items-center gap-2 text-text-secondary text-sm mb-2">
@@ -80,7 +80,7 @@ const CourseHistoryView = ({ setView, onEdit }: { setView: (v: View) => void, on
         </div>
         <div className="bg-card-bg rounded-2xl border border-outline-variant p-5 text-center">
           <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-1">Confirmadas</p>
-          <p className="text-3xl font-black text-green-600">{myEvents.filter(e => e.status === 'Confirmed' && !isEventExpired(e)).length}</p>
+          <p className="text-3xl font-black text-green-600">{myEvents.filter(e => (e.status === 'Confirmed' || e.status === 'Scheduled') && !isEventExpired(e)).length}</p>
         </div>
       </div>
 
@@ -93,7 +93,8 @@ const CourseHistoryView = ({ setView, onEdit }: { setView: (v: View) => void, on
           </div>
         </div>
       ) : (
-        Object.entries(groupedByCourse).map(([courseName, courseEvents]) => {
+        Object.entries(groupedByCourse).map(([courseName, courseEventsRaw]) => {
+          const courseEvents = courseEventsRaw as AcademicEvent[];
           const style = getCourseStyle(courseName);
           return (
             <div key={courseName} className="bg-card-bg rounded-3xl border border-outline-variant shadow-sm overflow-hidden">

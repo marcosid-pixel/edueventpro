@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, Calendar, Zap, AlertTriangle, Video, MapPin, Lock, Edit2, Trash2, Package, Download } from 'lucide-react';
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
 import type { View, AcademicEvent, Course } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useRealtimeCollection } from '../hooks/useRealtimeCollection';
 import { EVENT_CATEGORIES } from '../constants';
-import { parseJsonArray, getCourseStyle } from '../utils/index';
+import { parseJsonArray, getCourseStyle, toLocalDateStr } from '../utils/index';
 
 const UnifiedCalendar = ({ onEdit, onDelete }: { onEdit: (e: AcademicEvent) => void, onDelete: (id: string) => void }) => {
   const { user, effectiveRole } = useAuth();
@@ -57,7 +57,7 @@ const UnifiedCalendar = ({ onEdit, onDelete }: { onEdit: (e: AcademicEvent) => v
   const filteredMonthEvents = events.filter(e => {
     const matchesMonth = e.date.startsWith(selectedMonth);
     const matchesType = typeFilter === 'Todos' || e.type === typeFilter;
-    const currentStatus = conflicts.has(e.id) ? 'Conflito' : (e.status === 'Confirmed' ? 'Confirmado' : e.status);
+    const currentStatus = conflicts.has(e.id) ? 'Conflito' : ((e.status === 'Confirmed' || e.status === 'Scheduled') ? 'Confirmado' : e.status);
     const matchesStatus = statusFilter === 'Todos' || currentStatus === statusFilter;
 
     const searchStr = `${e.title} ${e.teacher} ${e.location} ${e.course}`.toLowerCase();
@@ -85,7 +85,7 @@ const UnifiedCalendar = ({ onEdit, onDelete }: { onEdit: (e: AcademicEvent) => v
   const monthStats = {
     total: filteredMonthEvents.length,
     conflicts: filteredMonthEvents.filter(e => conflicts.has(e.id)).length,
-    confirmed: filteredMonthEvents.filter(e => e.status === 'Confirmed').length,
+    confirmed: filteredMonthEvents.filter(e => e.status === 'Confirmed' || e.status === 'Scheduled').length,
     cancelled: filteredMonthEvents.filter(e => e.status === 'Cancelled').length
   };
 
@@ -147,7 +147,7 @@ const UnifiedCalendar = ({ onEdit, onDelete }: { onEdit: (e: AcademicEvent) => v
         {[0, 1, 2, 3, 4, 5, 6].map(dayOffset => {
           const targetDate = new Date(today);
           targetDate.setDate(today.getDate() + dayOffset);
-          const dateStr = targetDate.toISOString().split('T')[0];
+          const dateStr = toLocalDateStr(targetDate);
           const dayEvents = nextSevenDaysEvents.filter(e => e.date === dateStr);
           const isToday = dayOffset === 0;
 
@@ -310,7 +310,7 @@ const UnifiedCalendar = ({ onEdit, onDelete }: { onEdit: (e: AcademicEvent) => v
 
                   {groupedEvents[date].map(event => {
                     const isConflict = conflicts.has(event.id);
-                    const status = isConflict ? 'Conflito' : (event.status === 'Confirmed' ? 'Confirmado' : (event.status === 'Cancelled' ? 'Cancelado' : event.status));
+                    const status = isConflict ? 'Conflito' : ((event.status === 'Confirmed' || event.status === 'Scheduled') ? 'Confirmado' : (event.status === 'Cancelled' ? 'Cancelado' : event.status));
                     return (
                       <tr
                         key={event.id}

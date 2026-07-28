@@ -11,19 +11,20 @@ import {
   Plus,
   ChevronDown,
   GraduationCap,
-  Edit2
+  Edit2,
+  Check
 } from 'lucide-react';
 import { User as UserIcon } from 'lucide-react';
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import { useRealtimeCollection } from '../hooks/useRealtimeCollection';
 import { SkeletonCard } from '../components/Skeleton';
 import { ModernSelectionModal } from '../components/ModernSelectionModal';
-import { parseCategories, parseJsonArray, getCourseStyle, getCategoryStyle, calculateTotalHours, getEventHours, getEventConfirmationState, isEventExpired } from '../utils/index';
+import { parseCategories, parseJsonArray, getCourseStyle, getCategoryStyle, calculateTotalHours, getEventHours, getEventConfirmationState, isEventExpired, canConfirmEvent } from '../utils/index';
 import { EVENT_CATEGORIES } from '../constants';
 import type { View, AcademicEvent, Course, User, Notification } from '../types';
 
-const EventGroupItem: React.FC<{ groupId: string; title: string; evs: AcademicEvent[]; onEditEvent?: (e: AcademicEvent) => void; isExpanded: boolean; onToggle: () => void; isAdmin?: boolean }> = ({ groupId, title, evs, onEditEvent, isExpanded, onToggle, isAdmin }) => {
+const EventGroupItem: React.FC<{ groupId: string; title: string; evs: AcademicEvent[]; onEditEvent?: (e: AcademicEvent) => void; isExpanded: boolean; onToggle: () => void; isAdmin?: boolean; onConfirm?: () => void }> = ({ groupId, title, evs, onEditEvent, isExpanded, onToggle, isAdmin, onConfirm }) => {
   const sortedEvs = [...evs].sort((a, b) => a.date.localeCompare(b.date));
   
   return (
@@ -68,57 +69,95 @@ const EventGroupItem: React.FC<{ groupId: string; title: string; evs: AcademicEv
           >
             {sortedEvs.map(event => {
               const confirmState = getEventConfirmationState(event);
+              const canConfirm = canConfirmEvent(event);
               let statusDot = 'bg-secondary';
               if (confirmState === 'CONFIRMED' || confirmState === 'AUTO_CONFIRMED') statusDot = 'bg-green-500';
               else if (confirmState === 'CANCELLED') statusDot = 'bg-red-500';
               else if (confirmState === 'PENDING_CONFIRMATION') statusDot = 'bg-orange-500 animate-pulse';
+              const isPending = confirmState === 'PENDING_CONFIRMATION';
               
               return (
               <div 
-                key={event.id} 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEditEvent?.(event);
-                }}
-                className="flex items-center justify-between text-[11px] p-2.5 bg-surface-container/50 rounded-xl border border-outline-variant hover:border-secondary/30 hover:bg-secondary/5 transition-all group/event cursor-pointer"
+                key={event.id}
+                className={`rounded-xl transition-all ${
+                  isPending && canConfirm
+                    ? 'bg-orange-50/80 dark:bg-orange-950/20 border-2 border-orange-400 dark:border-orange-600 shadow-sm'
+                    : 'bg-surface-container/50 border border-outline-variant hover:border-secondary/30 hover:bg-secondary/5'
+                }`}
               >
-                <div className="flex items-center gap-3">
-                  <div className={`w-1.5 h-1.5 rounded-full ${statusDot}`} />
-                  <span className="font-bold text-text-primary line-clamp-1 group-hover/event:text-secondary transition-colors flex items-center gap-2">
-                    {event.title.includes('(') ? `Aula ${event.title.split('(')[1].replace(')', '')}` : event.title}
-                    {confirmState === 'PENDING_CONFIRMATION' && (
-                      <button 
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          try {
-                            await fetch(`/api/events_update/${event.id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'Confirmed' }) });
-                            toast('Aula confirmada!');
-                          } catch (err) { toast('Erro ao confirmar'); }
-                        }}
-                        className="text-[8px] bg-green-500 text-white px-2 py-0.5 rounded shadow hover:bg-green-600 transition-all font-bold flex items-center gap-1 active:scale-95 ml-2"
-                        title="Confirmar Realização"
-                      >
-                        ✔️ Confirmar Aula
-                      </button>
+                {/* Info row - clickable */}
+                <div 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditEvent?.(event);
+                  }}
+                  className="flex items-center justify-between text-[11px] p-2.5 cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full shrink-0 ${statusDot}`} />
+                    <span className="font-bold text-text-primary line-clamp-1 group-hover/event:text-secondary transition-colors">
+                      {event.title.includes('(') ? `Aula ${event.title.split('(')[1].replace(')', '')}` : event.title}
+                    </span>
+                    {isPending && (
+                      <span className="px-1.5 py-0.5 bg-orange-500/10 text-orange-600 dark:text-orange-400 text-[8px] font-black rounded-full border border-orange-500/20 uppercase tracking-wider shrink-0">
+                        Pendente
+                      </span>
                     )}
+                    {confirmState === 'CONFIRMED' && (
+                      <span className="px-1.5 py-0.5 bg-green-500/10 text-green-600 dark:text-green-400 text-[8px] font-black rounded-full border border-green-500/20 uppercase tracking-wider shrink-0">
+                        Confirmado
+                      </span>
+                    )}
+                    {confirmState === 'AUTO_CONFIRMED' && (
+                      <span className="px-1.5 py-0.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[8px] font-black rounded-full border border-indigo-500/20 uppercase tracking-wider shrink-0">
+                        Auto-confirmado
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-right shrink-0 flex items-center gap-3">
+                    <div>
+                      <p className="text-[9px] font-bold text-text-primary">{event.date.split('-').reverse().slice(0, 2).join('/')}</p>
+                      <p className="text-[8px] font-medium text-text-secondary">{event.timeStart} - {event.timeEnd}</p>
+                    </div>
                     {confirmState === 'AUTO_CONFIRMED' && isAdmin && (
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
                           onEditEvent?.(event);
                         }}
-                        className="text-[8px] bg-amber-500 text-white px-2 py-0.5 rounded shadow hover:bg-amber-600 transition-all font-bold flex items-center gap-1 active:scale-95 ml-2"
+                        className="text-[9px] bg-amber-500 text-white px-2.5 py-1 rounded-lg shadow-md hover:bg-amber-600 transition-all font-bold flex items-center gap-1 active:scale-95 shrink-0"
                         title="Reagendar Aula"
                       >
                         🔄 Reagendar
                       </button>
                     )}
-                  </span>
+                  </div>
                 </div>
-                <div className="text-right shrink-0">
-                  <p className="text-[9px] font-bold text-text-primary">{event.date.split('-').reverse().slice(0, 2).join('/')}</p>
-                  <p className="text-[8px] font-medium text-text-secondary">{event.timeStart}</p>
-                </div>
+
+                {/* Big confirm button - only when canConfirm */}
+                {isPending && canConfirm && (
+                  <div className="px-2.5 pb-2.5 relative z-10">
+                    <button 
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        try {
+                          const res = await fetch(`/api/events_update/${event.id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'Confirmed' }) });
+                          if (!res.ok) {
+                            const err = await res.json().catch(() => ({}));
+                            toast.error(err.error || 'Erro ao confirmar aula');
+                            return;
+                          }
+                          toast.success('Aula confirmada com sucesso!');
+                          onConfirm?.();
+                        } catch (err) { toast.error('Erro de conexão ao confirmar'); }
+                      }}
+                      className="w-full py-2.5 bg-green-500 hover:bg-green-600 text-white text-sm font-bold rounded-xl shadow-lg shadow-green-500/30 hover:shadow-green-500/50 transition-all active:scale-[0.98] flex items-center justify-center gap-2 relative z-10"
+                    >
+                      <Check size={16} strokeWidth={3} />
+                      Confirmar Realização
+                    </button>
+                  </div>
+                )}
               </div>
             )})}
           </motion.div>
@@ -129,9 +168,9 @@ const EventGroupItem: React.FC<{ groupId: string; title: string; evs: AcademicEv
 };
 
 const CourseManagementView = ({ onEditEvent, setView }: { onEditEvent?: (e: AcademicEvent) => void; setView: (v: View) => void }) => {
-  const { user, effectiveRole } = useAuth();
+  const { user, effectiveRole, simulatedRole } = useAuth();
   const { data: courses, loading: coursesLoading } = useRealtimeCollection<Course>('courses');
-  const { data: allEvents, loading: eventsLoading } = useRealtimeCollection<AcademicEvent>('events');
+  const { data: allEvents, loading: eventsLoading, refresh: refreshEvents } = useRealtimeCollection<AcademicEvent>('events');
   const { data: users, loading: usersLoading } = useRealtimeCollection<User>('users');
   
   const isAdmin = effectiveRole === 'ADMIN';
@@ -146,10 +185,14 @@ const CourseManagementView = ({ onEditEvent, setView }: { onEditEvent?: (e: Acad
   const [selectionModal, setSelectionModal] = useState<{ type: 'teacher' | 'category' | 'batch-teacher' | 'batch-category'; courseName?: string; courseId?: string; batchId?: string; batchTitle?: string } | null>(null);
 
   // Professores só veem eventos onde são o teacher ou o criador, e NÃO expirados
+  // Em modo teste (simulatedRole), filtra apenas por teacher para não ver eventos de outros professores
   const baseEvents = isAdmin
     ? allEvents
     : allEvents.filter(e => {
         if (isEventExpired(e)) return false;
+        if (simulatedRole) {
+          return e.teacher === user?.displayName;
+        }
         return e.teacher === user?.displayName || e.createdBy === user?.id;
       });
 
@@ -506,7 +549,7 @@ const CourseManagementView = ({ onEditEvent, setView }: { onEditEvent?: (e: Acad
               const commonTeacher = teacherSet.length === 1 ? teacherSet[0] : null;
               const categories = [...new Set(sorted.map(e => e.category).filter(Boolean))];
               const commonCategory = categories.length === 1 ? categories[0] : null;
-              const confirmedCount = sorted.filter(e => e.status === 'Confirmed').length;
+              const confirmedCount = sorted.filter(e => e.status === 'Confirmed' || e.status === 'Scheduled').length;
               const progressPct = Math.round((confirmedCount / sorted.length) * 100);
               const isOpen = expandedGlobalBatch === batch.id;
               return (
@@ -545,57 +588,89 @@ const CourseManagementView = ({ onEditEvent, setView }: { onEditEvent?: (e: Acad
                         className="overflow-hidden"
                       >
                         <div className="border-t border-outline-variant/60 mx-3" />
-                        <div className="p-3 space-y-1.5 max-h-[300px] overflow-y-auto">
+                        <div className="p-3 space-y-2 max-h-[400px] overflow-y-auto">
                           {sorted.map(ev => {
                             const confirmState = getEventConfirmationState(ev);
+                            const canConfirm = canConfirmEvent(ev);
                             let statusDot = 'bg-slate-400';
                             if (confirmState === 'CONFIRMED' || confirmState === 'AUTO_CONFIRMED') statusDot = 'bg-green-500';
                             else if (confirmState === 'CANCELLED') statusDot = 'bg-red-500';
                             else if (confirmState === 'PENDING_CONFIRMATION') statusDot = 'bg-orange-500 animate-pulse';
-
+                            const isPending = confirmState === 'PENDING_CONFIRMATION';
                             const expired = isEventExpired(ev);
 
                             return (
                             <div
                               key={ev.id}
-                              onClick={(e) => { e.stopPropagation(); onEditEvent?.(ev); }}
-                              className="flex items-center gap-2.5 p-2 bg-card-bg rounded-lg border border-outline-variant hover:border-secondary/30 hover:bg-secondary/5 transition-all cursor-pointer group/event"
+                              className={`rounded-lg transition-all ${
+                                isPending && canConfirm
+                                  ? 'bg-orange-50/80 dark:bg-orange-950/20 border-2 border-orange-400 dark:border-orange-600'
+                                  : 'bg-card-bg border border-outline-variant hover:border-secondary/30 hover:bg-secondary/5'
+                              }`}
                             >
-                              <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusDot}`} />
-                              <span className="text-[10px] font-mono text-text-secondary shrink-0 tabular-nums">
-                                {new Date(ev.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
-                              </span>
-                              <span className={`text-[10px] font-bold truncate group-hover/event:text-secondary transition-colors ${expired ? 'text-text-secondary line-through' : 'text-text-primary'}`}>
-                                {ev.title}
-                              </span>
-                              {confirmState === 'PENDING_CONFIRMATION' && (
-                                <button 
-                                  onClick={async (e) => {
-                                    e.stopPropagation();
-                                    try {
-                                      await fetch(`/api/events_update/${ev.id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'Confirmed' }) });
-                                      toast('Aula confirmada!');
-                                    } catch (err) { toast('Erro ao confirmar'); }
-                                  }}
-                                  className="text-[8px] bg-green-500 text-white px-2 py-0.5 rounded shadow hover:bg-green-600 transition-all font-bold flex items-center gap-1 active:scale-95 ml-2"
-                                  title="Confirmar Realização"
-                                >
-                                  ✔️ Confirmar Aula
-                                </button>
+                              {/* Info row */}
+                              <div 
+                                onClick={(e) => { e.stopPropagation(); onEditEvent?.(ev); }}
+                                className="flex items-center gap-2.5 p-2 cursor-pointer"
+                              >
+                                <div className={`w-2 h-2 rounded-full shrink-0 ${statusDot}`} />
+                                <span className="text-[10px] font-mono text-text-secondary shrink-0 tabular-nums">
+                                  {new Date(ev.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                                </span>
+                                <span className={`text-[10px] font-bold truncate group-hover/event:text-secondary transition-colors ${expired ? 'text-text-secondary line-through' : 'text-text-primary'}`}>
+                                  {ev.title}
+                                </span>
+                                {isPending && (
+                                  <span className="px-1.5 py-0.5 bg-orange-500/10 text-orange-600 dark:text-orange-400 text-[8px] font-black rounded-full border border-orange-500/20 uppercase tracking-wider shrink-0">
+                                    Pendente
+                                  </span>
+                                )}
+                                {confirmState === 'CONFIRMED' && (
+                                  <span className="px-1.5 py-0.5 bg-green-500/10 text-green-600 dark:text-green-400 text-[8px] font-black rounded-full border border-green-500/20 uppercase tracking-wider shrink-0">
+                                    Confirmado
+                                  </span>
+                                )}
+                                <div className="ml-auto shrink-0 flex items-center gap-2">
+                                  {ev.timeStart && <span className="text-[9px] text-text-secondary font-mono tabular-nums">{ev.timeStart}</span>}
+                                  {expired && isAdmin && (
+                                    <button 
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onEditEvent?.(ev);
+                                      }}
+                                      className="text-[9px] bg-amber-500 text-white px-2.5 py-1 rounded-lg shadow-md hover:bg-amber-600 transition-all font-bold flex items-center gap-1 active:scale-95 shrink-0"
+                                      title="Reagendar Aula"
+                                    >
+                                      🔄 Reagendar
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Big confirm button */}
+                              {isPending && canConfirm && (
+                                <div className="px-2 pb-2 relative z-10">
+                                  <button 
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      try {
+                                        const res = await fetch(`/api/events_update/${ev.id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'Confirmed' }) });
+                                        if (!res.ok) {
+                                          const err = await res.json().catch(() => ({}));
+                                          toast.error(err.error || 'Erro ao confirmar aula');
+                                          return;
+                                        }
+                                        toast.success('Aula confirmada com sucesso!');
+                                        refreshEvents();
+                                      } catch (err) { toast.error('Erro de conexão ao confirmar'); }
+                                    }}
+                                    className="w-full py-2 bg-green-500 hover:bg-green-600 text-white text-[11px] font-bold rounded-lg shadow-lg shadow-green-500/30 hover:shadow-green-500/50 transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 relative z-10"
+                                  >
+                                    <Check size={13} strokeWidth={3} />
+                                    Confirmar Realização
+                                  </button>
+                                </div>
                               )}
-                              {expired && isAdmin && (
-                                <button 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onEditEvent?.(ev);
-                                  }}
-                                  className="text-[8px] bg-amber-500 text-white px-2 py-0.5 rounded shadow hover:bg-amber-600 transition-all font-bold flex items-center gap-1 active:scale-95 ml-2"
-                                  title="Reagendar Aula"
-                                >
-                                  🔄 Reagendar
-                                </button>
-                              )}
-                              {ev.timeStart && <span className="text-[9px] text-text-secondary font-mono shrink-0 ml-auto">{ev.timeStart}</span>}
                             </div>
                           )})}
                         </div>
@@ -812,6 +887,7 @@ const CourseManagementView = ({ onEditEvent, setView }: { onEditEvent?: (e: Acad
                           else next.add(groupId);
                           return next;
                         })}
+                        onConfirm={refreshEvents}
                       />
                     );
                   });

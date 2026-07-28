@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useRealtimeCollection } from '../hooks/useRealtimeCollection';
 import type { AcademicEvent, Course, User, View } from '../types';
 import { EVENT_CATEGORIES } from '../constants';
-import { parseJsonArray, getCourseStyle } from '../utils/index';
+import { parseJsonArray, getCourseStyle, toLocalDateStr } from '../utils/index';
 
 const PERIODS = [
   { id: 'morning', label: 'MANHÃ', start: '00:00', end: '12:00' },
@@ -45,8 +45,8 @@ export default function ScheduleHub({ onEdit, onNewEvent, onDelete }: { onEdit: 
   };
 
   const weekDays = getWeekDays();
-  const startOfWeekStr = weekDays[0].toISOString().split('T')[0];
-  const endOfWeekStr = weekDays[5].toISOString().split('T')[0];
+  const startOfWeekStr = toLocalDateStr(weekDays[0]);
+  const endOfWeekStr = toLocalDateStr(weekDays[5]);
 
   // User visibility rules (same as unified calendar)
   const userCourseIds = parseJsonArray(user?.courseId);
@@ -117,13 +117,13 @@ export default function ScheduleHub({ onEdit, onNewEvent, onDelete }: { onEdit: 
   };
 
   const getStatusDisplay = (status: string) => {
-    if (status === 'Confirmed') return { label: 'Confirmado', color: 'bg-green-500', text: 'text-green-600', bg: 'bg-green-50' };
+    if (status === 'Confirmed' || status === 'Scheduled') return { label: 'Confirmado', color: 'bg-green-500', text: 'text-green-600', bg: 'bg-green-50' };
     if (status === 'Cancelled') return { label: 'Cancelado', color: 'bg-red-500', text: 'text-red-600', bg: 'bg-red-50' };
     return { label: 'Pendente', color: 'bg-amber-500', text: 'text-amber-600', bg: 'bg-amber-50' };
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-12">
+    <div className="space-y-6 animate-in fade-in duration-500 pb-12 px-6">
       {/* Top Header */}
       <div className="flex flex-col md:flex-row justify-between md:items-end gap-4 mb-2">
          <div>
@@ -232,15 +232,15 @@ export default function ScheduleHub({ onEdit, onNewEvent, onDelete }: { onEdit: 
 
       {/* Kanban Board Area */}
       <div className="flex gap-4 overflow-x-auto pb-6 snap-x">
-         {(viewMode === 'week' ? weekDays.map(d => d.toISOString().split('T')[0]) : sortedMonthDates).length === 0 ? (
+         {(viewMode === 'week' ? weekDays.map(d => toLocalDateStr(d)) : sortedMonthDates).length === 0 ? (
             <div className="w-full py-20 text-center text-text-secondary italic text-sm">
                Nenhum evento agendado para este período.
             </div>
          ) : (
-         (viewMode === 'week' ? weekDays.map(d => d.toISOString().split('T')[0]) : sortedMonthDates).map((dateStr) => {
+         (viewMode === 'week' ? weekDays.map(d => toLocalDateStr(d)) : sortedMonthDates).map((dateStr) => {
             const date = new Date(dateStr + 'T12:00:00');
             const dayEvents = filteredEvents.filter(e => e.date === dateStr);
-            const isToday = new Date().toISOString().split('T')[0] === dateStr;
+            const isToday = toLocalDateStr(new Date()) === dateStr;
             const weekDayName = date.toLocaleDateString('pt-BR', { weekday: 'long' }).split('-')[0];
 
             return (

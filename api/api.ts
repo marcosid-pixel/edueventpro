@@ -22,6 +22,40 @@ function requireAuth(req: express.Request, res: express.Response, next: express.
   next();
 }
 
+async function requireEventOwnerOrAdmin(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const eventId = req.params.id || req.body.id;
+  if (!eventId) return next();
+  try {
+    const userResult = await turso.execute("SELECT role, displayName FROM users WHERE id = ?", [req.session!.userId]);
+    const user = userResult.rows[0] as any;
+    const userRole = user?.role;
+    if (userRole === 'ADMIN') return next();
+
+    const eventResult = await turso.execute("SELECT createdBy, teacher FROM events WHERE id = ?", [eventId]);
+    const event = eventResult.rows[0] as any;
+    if (!event) return res.status(404).json({ error: "Evento não encontrado" });
+    if (event.createdBy !== req.session!.userId && event.teacher !== user?.displayName) {
+      return res.status(403).json({ error: "Você não tem permissão para modificar este evento" });
+    }
+    next();
+  } catch {
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+}
+
+async function requireAdmin(req: express.Request, res: express.Response, next: express.NextFunction) {
+  try {
+    const userResult = await turso.execute("SELECT role FROM users WHERE id = ?", [req.session!.userId]);
+    const role = (userResult.rows[0] as any)?.role;
+    if (role !== 'ADMIN') {
+      return res.status(403).json({ error: "Apenas administradores podem executar esta ação" });
+    }
+    next();
+  } catch {
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+}
+
 function validateTable(req: express.Request, res: express.Response, next: express.NextFunction) {
   const table = req.params.table;
   if (!ALLOWED_TABLES.includes(table)) {
@@ -42,7 +76,7 @@ router.get("/notifications", async (req, res) => {
     const result = await turso.execute("SELECT * FROM notifications ORDER BY updatedAt DESC");
     res.json(result.rows);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 });
 
@@ -64,7 +98,7 @@ router.post("/notifications", async (req, res) => {
 
     res.json({ success: true });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 });
 
@@ -73,7 +107,7 @@ router.post("/notifications_read/:id", async (req, res) => {
     await turso.execute("UPDATE notifications SET isRead = 1 WHERE id = ?", [req.params.id]);
     res.json({ success: true });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 });
 
@@ -82,18 +116,18 @@ router.post("/notifications_read_all", async (req, res) => {
     await turso.execute("UPDATE notifications SET isRead = 1");
     res.json({ success: true });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 });
 
 // --- Logs (must come before generic CRUD) ---
 
-router.delete("/activity_logs/all", async (req, res) => {
+router.delete("/activity_logs/all", requireAdmin, async (req, res) => {
   try {
     await turso.execute("DELETE FROM activity_logs");
     res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (err: any) {
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 });
 
@@ -102,7 +136,7 @@ router.get("/activity_logs", async (req, res) => {
     const result = await turso.execute("SELECT * FROM activity_logs ORDER BY createdAt DESC LIMIT 500");
     res.json(result.rows);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 });
 
@@ -119,7 +153,7 @@ router.post("/activity_logs", async (req, res) => {
     );
     res.json({ id, ...req.body });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 });
 
@@ -137,7 +171,7 @@ router.get("/:table", validateTable, async (req, res) => {
       const result = await turso.execute(`SELECT * FROM ${table} ORDER BY createdAt DESC LIMIT ? OFFSET ?`, [limit, offset]);
       res.json(result.rows);
     } catch (err2: any) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: "Erro interno do servidor" });
     }
   }
 });
@@ -148,7 +182,7 @@ router.get("/:table/:id", validateTable, async (req, res) => {
     const result = await turso.execute(`SELECT * FROM ${table} WHERE id = ?`, [id]);
     res.json(result.rows[0] || null);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 });
 
@@ -173,12 +207,31 @@ router.post("/:table", validateTable, async (req, res) => {
 
     res.json({ id, ...req.body });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 });
 
 router.patch("/:table/:id", validateTable, async (req, res) => {
   const { table, id } = req.params;
+
+  // Authorization: only admin or event owner can modify events
+  if (table === 'events') {
+    try {
+      const userResult = await turso.execute("SELECT role FROM users WHERE id = ?", [req.session!.userId]);
+      const userRole = (userResult.rows[0] as any)?.role;
+      if (userRole !== 'ADMIN') {
+        const eventResult = await turso.execute("SELECT createdBy FROM events WHERE id = ?", [id]);
+        const event = eventResult.rows[0] as any;
+        if (!event) return res.status(404).json({ error: "Evento não encontrado" });
+        if (event.createdBy !== req.session!.userId) {
+          return res.status(403).json({ error: "Você não tem permissão para modificar este evento" });
+        }
+      }
+    } catch {
+      return res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  }
+
   const fields = sanitizeFields(Object.keys(req.body).filter(k => k !== 'id'));
   const setClause = fields.map(f => `${f} = ?`).join(", ");
   const args = [...fields.map(f => req.body[f]), id] as any[];
@@ -190,12 +243,12 @@ router.patch("/:table/:id", validateTable, async (req, res) => {
     );
     res.json({ id, ...req.body });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 });
 
 // Special routes for events (legacy compatibility)
-router.post("/events_update/:id", async (req, res) => {
+router.post("/events_update/:id", requireEventOwnerOrAdmin, async (req, res) => {
   const { id } = req.params;
   const fields = sanitizeFields(Object.keys(req.body).filter(k => k !== 'id'));
   const setClause = fields.map(f => `${f} = ?`).join(", ");
@@ -208,20 +261,20 @@ router.post("/events_update/:id", async (req, res) => {
     );
     res.json({ id, ...req.body });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 });
 
-router.post("/events_delete/:id", async (req, res) => {
+router.post("/events_delete/:id", requireEventOwnerOrAdmin, async (req, res) => {
   try {
     await turso.execute("DELETE FROM events WHERE id = ?", [req.params.id]);
     res.json({ success: true, id: req.params.id });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 });
 
-router.post("/events_bulk_update", async (req, res) => {
+router.post("/events_bulk_update", requireAdmin, async (req, res) => {
   const { ids, data } = req.body;
   if (!ids || !Array.isArray(ids) || ids.length === 0) {
     return res.status(400).json({ error: "Lista de IDs inválida" });
@@ -240,7 +293,7 @@ router.post("/events_bulk_update", async (req, res) => {
     }
     res.json({ success: true, count: ids.length });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 });
 
@@ -261,7 +314,7 @@ router.delete("/:table/:id", validateTable, async (req, res) => {
     await turso.execute(`DELETE FROM ${table} WHERE id = ?`, [id]);
     res.json({ success: true, id });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Erro interno do servidor" });
   }
 });
 

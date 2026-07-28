@@ -35,7 +35,7 @@ export interface AcademicEvent {
   description: string;
   date: string;
   time: string;
-  status: 'Published' | 'Draft' | 'Conflict' | 'Cancelled' | 'Confirmed' | 'Tentative' | 'Needs Review';
+  status: 'Published' | 'Draft' | 'Conflict' | 'Cancelled' | 'Confirmed' | 'Scheduled' | 'Tentative' | 'Needs Review';
   speaker?: string;
   location: string;
   createdBy: string;
@@ -67,6 +67,8 @@ export interface User {
   role: UserRole;
   courseId?: string;
   category?: string;
+  workStart?: string;
+  workEnd?: string;
 }
 
 export interface Notification {

@@ -26,47 +26,47 @@ export const Sidebar = ({ currentView, setView }: { currentView: View, setView: 
   if (currentView === 'login' || currentView === 'signup') return null;
 
   return (
-    <aside className="fixed left-0 top-0 h-full w-[260px] bg-card-bg border-r border-outline-variant flex flex-col py-6 px-4 gap-2 z-50 transition-colors duration-300">
-      <div className="mb-8 px-2">
-        <h1 className="font-headline text-2xl font-bold text-text-primary">EduEvent Pro</h1>
-        <p className="text-xs text-text-secondary uppercase tracking-wider font-semibold">Gestão Acadêmica</p>
+    <aside className="fixed left-0 top-0 h-screen w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 flex flex-col py-6 px-4 gap-2 z-50 transition-colors duration-300 overflow-y-auto">
+      <div className="mb-8 px-3">
+        <h1 className="font-headline text-2xl font-bold text-slate-800 dark:text-white">EduEvent Pro</h1>
+        <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">Gestão Acadêmica</p>
       </div>
       <nav className="flex flex-col gap-1 flex-1">
         {navItems.map((item) => (
           <button key={item.id} onClick={() => setView(item.id)}
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 ${
+            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-sm font-medium ${
               currentView === item.id
-                ? 'bg-secondary-container text-white shadow-sm'
-                : 'text-text-secondary hover:bg-surface-container'
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200 dark:shadow-indigo-900/50'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
             <item.icon size={20} />
-            <span className="font-medium">{item.label}</span>
+            <span>{item.label}</span>
           </button>
         ))}
-        <div className="mt-4 pt-4 border-t border-outline-variant">
+        <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
           <button onClick={() => setView('settings')}
-            className={`flex items-center gap-3 px-3 py-2 w-full rounded-lg transition-all ${
-              currentView === 'settings' ? 'bg-secondary-container text-white' : 'text-text-secondary hover:bg-surface-container'
+            className={`flex items-center gap-3 px-4 py-2.5 w-full rounded-xl transition-all text-sm font-medium ${
+              currentView === 'settings' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200 dark:shadow-indigo-900/50' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
             <Settings size={20} />
-            <span className="font-medium">Configurações</span>
+            <span>Configurações</span>
           </button>
           <button onClick={toggleTheme}
-            className="flex items-center gap-3 px-3 py-2 w-full text-text-secondary hover:bg-surface-container rounded-lg transition-all mt-1"
+            className="flex items-center gap-3 px-4 py-2.5 w-full text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all mt-1 text-sm font-medium"
           >
             {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
-            <span className="font-medium">{theme === 'light' ? 'Modo Escuro' : 'Modo Claro'}</span>
+            <span>{theme === 'light' ? 'Modo Escuro' : 'Modo Claro'}</span>
           </button>
         </div>
       </nav>
       <div className="mt-auto px-2">
         <button onClick={logout}
-          className="flex items-center gap-3 px-3 py-2 w-full text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
+          className="flex items-center gap-3 px-4 py-2.5 w-full text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all text-sm font-medium"
         >
           <LogOut size={20} />
-          <span className="font-medium">Sair</span>
+          <span>Sair</span>
         </button>
       </div>
     </aside>

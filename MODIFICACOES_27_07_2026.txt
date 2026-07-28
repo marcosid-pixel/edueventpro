@@ -1,0 +1,100 @@
+========================================
+ MODIFICAÇÕES REALIZADAS - 27/07/2026
+ EduEvent Pro Dashboard
+========================================
+
+1. FILTRO DE PROFESSOR NO EVENTFORM
+   Arquivo: src/views/EventForm.tsx
+   - Removida a linha "if (u.role === 'ADMIN') return false;" (era linha 981)
+   - Motivo: João Marcos (ADMIN) não aparecia no select de professor
+   - Agora qualquer usuário (ADMIN ou PROFESSOR) com courseId vinculado aparece
+
+2. STATUS DE CRIAÇÃO DE EVENTOS
+   Arquivo: src/views/EventForm.tsx (linha 198)
+   - Mudado de 'Confirmed' para 'Scheduled'
+   - Eventos agora entram no fluxo de confirmação (Scheduled → PENDING → Confirmed)
+
+3. TIPO AcademicEvent.status
+   Arquivo: src/types.ts (linha 38)
+   - Adicionado 'Scheduled' ao union type de status
+
+4. ATUALIZAÇÃO DE 20 REFERÊNCIAS DE STATUS
+   Arquivos afetados (status === 'Confirmed' agora inclui || status === 'Scheduled'):
+   - Dashboard.tsx (3 ocorrências)
+   - ScheduleHub.tsx (1 ocorrência)
+   - EventList.tsx (3 ocorrências)
+   - UnifiedCalendar.tsx (3 ocorrências)
+   - CourseHistoryView.tsx (1 ocorrência)
+   - ProfileSidebar.tsx (3 ocorrências)
+   - CourseManagementView.tsx (1 ocorrência)
+   - ReportsView.tsx (1 ocorrência)
+   - UserManagementView.tsx (4 ocorrências)
+
+5. NOTIFICAÇÃO: MARCAR COMO LIDA AO ABRIR SININHO
+   Arquivo: src/views/Dashboard.tsx
+   - Adicionado refreshNotifications no hook
+   - Ao clicar no sininho, chama POST /api/notifications_read_all
+   - Badge some imediatamente
+
+6. BOTÃO DE CONFIRMAÇÃO: REFRESH IMEDIATO
+   Arquivo: src/views/CourseManagementView.tsx
+   - Adicionado refreshEvents no hook de eventos
+   - Adicionada prop onConfirm no componente EventGroupItem
+   - Após confirmar aula, dados atualizam sem esperar poll de 10s
+
+7. NOTIFICAÇÕES PARA PROFESSORES CONFIRMAREM AULAS
+   Arquivo: src/views/Dashboard.tsx
+   - Adicionado bloco else para eventos PENDING_CONFIRMATION
+   - Gera notificação "📋 Aula aguardando confirmação" no sininho
+   - Professores veem pendências ao abrir o painel
+
+8. REDIRECIONAMENTO PÓS-AGENDAMENTO
+   Arquivo: src/views/EventForm.tsx
+   - 6x setView('unified-calendar') substituído por setView('courses')
+   - Após salvar/reagendar/confirmar/cancelar/excluir → volta para Gestão de Cursos
+
+9. BOTÃO DE EXCLUIR AULAS NO PAINEL DO USUÁRIO
+   Arquivo: src/views/UserManagementView.tsx
+   - Importado Trash2 do lucide-react
+   - Adicionado refreshEvents no hook
+   - Adicionado handleDeleteEvent com confirmação
+   - Botão lixeira aparece no hover dos cards (apenas para admins)
+   - Visível tanto em "Próximas Aulas" quanto em "Histórico"
+
+10. FILTRO INDIVIDUAL DE EVENTOS NO DASHBOARD
+    Arquivo: src/views/Dashboard.tsx
+    - Removida lógica matchesCourse && matchesCategory para não-admins
+    - Professores agora veem APENAS seus próprios eventos
+    - Corrigido bug onde admin simulando professor via Ellen
+
+11. CARDS DE PRODUTIVIDADE (SCHEDULECARDS) - REDESIGN COMPLETO
+    Arquivo: src/components/dashboard/ScheduleCards.tsx
+    - Badge de data: formato seta/pentágono com clip-path
+    - Divisória vertical entre centro e direita
+    - Onda SVG ao lado de "Produtivo"
+    - Pílula de porcentagem
+    - Altura fixa h-24
+    - Barras semanais removidas
+    - Containers com max-w-xl (não estica tela inteira)
+    - Tipografia maior e mais legível
+    - Layout flex horizontal: Badge | Produtivo + % | divider | Tempo
+
+========================================
+ COMO TESTAR
+========================================
+
+- Criar evento com data passada (ex: ontem) → status será 'Scheduled'
+- Expandir na Gestão de Cursos → botão "Confirmar Realização" deve aparecer
+- Clicar confirmar → dados atualizam instantaneamente
+- Sininho do professor → mostra aulas pendentes de confirmação
+- Admin pode excluir aulas pelo painel do usuário (hover → lixeira)
+- Após agendar/editar → volta para Gestão de Cursos (não Cronograma)
+
+========================================
+ SERVIDOR
+========================================
+- Porta: 3000
+- Comando: npm run dev (ou npx tsx api/index.ts)
+- Build: npx tsc --noEmit (0 erros)
+
+========================================

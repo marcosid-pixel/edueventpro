@@ -10,10 +10,11 @@ import {
   Clock,
   CheckCircle2,
   KeyRound,
-  Mail
+  Mail,
+  Trash2
 } from 'lucide-react';
 import { User as UserIcon, AlertCircle as AlertIcon } from 'lucide-react';
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import { useRealtimeCollection } from '../hooks/useRealtimeCollection';
 import { parseJsonArray, calculateTotalHours, getEventHours } from '../utils/index';
@@ -21,9 +22,11 @@ import { ACADEMIC_COURSES, EVENT_CATEGORIES } from '../constants';
 import type { View, AcademicEvent, User, Course, ActivityLog } from '../types';
 
 const UserManagementView = () => {
+  const { effectiveRole } = useAuth();
+  const isAdmin = effectiveRole === 'ADMIN';
   const { data: users } = useRealtimeCollection<User>('users');
   const { data: courses } = useRealtimeCollection<Course>('courses');
-  const { data: events } = useRealtimeCollection<AcademicEvent>('events');
+  const { data: events, refresh: refreshEvents } = useRealtimeCollection<AcademicEvent>('events');
   const { data: activityLogs } = useRealtimeCollection<ActivityLog>('activity_logs');
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
 
@@ -56,6 +59,15 @@ const UserManagementView = () => {
     } catch (err) {
       toast.error('Erro de conexão.', { id: 'reset' });
     }
+  };
+
+  const handleDeleteEvent = async (eventId: string, eventTitle: string) => {
+    if (!confirm(`Excluir a aula "${eventTitle}"?`)) return;
+    try {
+      await fetch(`/api/events_delete/${eventId}`, { method: 'POST' });
+      toast.success('Aula excluída com sucesso!');
+      refreshEvents();
+    } catch (err) { toast.error('Erro ao excluir aula'); }
   };
 
   const logs = [...activityLogs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -284,7 +296,7 @@ const UserManagementView = () => {
                            </div>
                            <p className="text-xs text-text-secondary leading-relaxed">
                              Este docente é responsável por <span className="font-bold text-text-primary">{userEvents.length} eventos</span>. 
-                             A taxa de aulas confirmadas está em <span className="font-bold text-text-primary">{Math.round((userEvents.filter(e => e.status === 'Confirmed').length / (userEvents.length || 1)) * 100)}%</span>.
+                              A taxa de aulas confirmadas está em <span className="font-bold text-text-primary">{Math.round((userEvents.filter(e => e.status === 'Confirmed' || e.status === 'Scheduled').length / (userEvents.length || 1)) * 100)}%</span>.
                            </p>
                         </div>
 
@@ -341,20 +353,31 @@ const UserManagementView = () => {
                                  <span className="text-[9px] font-bold text-text-secondary">{userEvents.filter(e => e.status === 'Scheduled').length}</span>
                               </div>
                               <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1 scrollbar-hide">
-                                 {userEvents.filter(e => e.status === 'Scheduled').map(ev => (
-                                   <div key={ev.id} className="p-3 bg-card-bg border border-outline-variant rounded-2xl flex items-center justify-between group/ev">
-                                      <div className="flex items-center gap-3">
-                                         <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0">
-                                            <Clock size={14} />
-                                         </div>
-                                         <div>
-                                            <p className="text-[11px] font-black text-text-primary line-clamp-1">{ev.title}</p>
-                                            <p className="text-[9px] text-text-secondary font-medium">{new Date(ev.date).toLocaleDateString('pt-BR')}</p>
-                                         </div>
-                                      </div>
-                                      <div className="w-2 h-2 rounded-full bg-orange-400" />
-                                   </div>
-                                 ))}
+                                  {userEvents.filter(e => e.status === 'Scheduled').map(ev => (
+                                    <div key={ev.id} className="p-3 bg-card-bg border border-outline-variant rounded-2xl flex items-center justify-between group/ev">
+                                       <div className="flex items-center gap-3">
+                                          <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0">
+                                             <Clock size={14} />
+                                          </div>
+                                          <div>
+                                             <p className="text-[11px] font-black text-text-primary line-clamp-1">{ev.title}</p>
+                                             <p className="text-[9px] text-text-secondary font-medium">{new Date(ev.date).toLocaleDateString('pt-BR')}</p>
+                                          </div>
+                                       </div>
+                                       <div className="flex items-center gap-2">
+                                         {isAdmin && (
+                                           <button
+                                             onClick={(e) => { e.stopPropagation(); handleDeleteEvent(ev.id, ev.title); }}
+                                             className="opacity-0 group-hover/ev:opacity-100 p-1.5 text-text-secondary hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                             title="Excluir aula"
+                                           >
+                                             <Trash2 size={12} />
+                                           </button>
+                                         )}
+                                         <div className="w-2 h-2 rounded-full bg-orange-400" />
+                                       </div>
+                                    </div>
+                                  ))}
                                  {userEvents.filter(e => e.status === 'Scheduled').length === 0 && (
                                    <div className="p-8 text-center border-2 border-dashed border-outline-variant rounded-2xl text-[10px] text-text-secondary italic">
                                      Nenhuma aula pendente.
@@ -366,11 +389,11 @@ const UserManagementView = () => {
                            <div className="space-y-3">
                               <div className="flex items-center justify-between px-2">
                                  <span className="text-[9px] font-black text-green-600 uppercase tracking-widest">Histórico / Confirmadas</span>
-                                 <span className="text-[9px] font-bold text-text-secondary">{userEvents.filter(e => e.status === 'Confirmed' || e.status === 'Completed').length}</span>
+                                  <span className="text-[9px] font-bold text-text-secondary">{userEvents.filter(e => e.status === 'Confirmed' || e.status === 'Scheduled' || e.status === 'Completed').length}</span>
                               </div>
                               <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1 scrollbar-hide">
-                                 {userEvents.filter(e => e.status === 'Confirmed' || e.status === 'Completed').map(ev => (
-                                   <div key={ev.id} className="p-3 bg-card-bg border border-outline-variant rounded-2xl flex items-center justify-between">
+                                  {userEvents.filter(e => e.status === 'Confirmed' || e.status === 'Scheduled' || e.status === 'Completed').map(ev => (
+                                   <div key={ev.id} className="p-3 bg-card-bg border border-outline-variant rounded-2xl flex items-center justify-between group/ev">
                                       <div className="flex items-center gap-3">
                                          <div className="w-8 h-8 rounded-lg bg-green-500/10 text-green-600 flex items-center justify-center shrink-0">
                                             <CheckCircle2 size={14} />
@@ -380,10 +403,21 @@ const UserManagementView = () => {
                                             <p className="text-[9px] text-text-secondary font-medium">{new Date(ev.date).toLocaleDateString('pt-BR')}</p>
                                          </div>
                                       </div>
-                                      <div className="w-2 h-2 rounded-full bg-green-500" />
+                                      <div className="flex items-center gap-2">
+                                        {isAdmin && (
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); handleDeleteEvent(ev.id, ev.title); }}
+                                            className="opacity-0 group-hover/ev:opacity-100 p-1.5 text-text-secondary hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                            title="Excluir aula"
+                                          >
+                                            <Trash2 size={12} />
+                                          </button>
+                                        )}
+                                        <div className="w-2 h-2 rounded-full bg-green-500" />
+                                      </div>
                                    </div>
                                  ))}
-                                 {userEvents.filter(e => e.status === 'Confirmed' || e.status === 'Completed').length === 0 && (
+                                  {userEvents.filter(e => e.status === 'Confirmed' || e.status === 'Scheduled' || e.status === 'Completed').length === 0 && (
                                    <div className="p-8 text-center border-2 border-dashed border-outline-variant rounded-2xl text-[10px] text-text-secondary italic">
                                      Nenhuma aula concluída.
                                    </div>

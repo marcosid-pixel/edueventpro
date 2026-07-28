@@ -6,6 +6,8 @@ export interface User {
   email: string | null;
   photoURL: string | null;
   role?: string;
+  workStart?: string;
+  workEnd?: string;
 }
 
 type SimulatedRole = 'ADMIN' | 'PROFESSOR' | null;
@@ -24,41 +26,21 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-function readEffectiveRole(userRole: string | undefined): string | undefined {
-  if (typeof window !== 'undefined') {
-    const testMode = localStorage.getItem('testMode') === 'true';
-    if (testMode) {
-      const role = localStorage.getItem('testModeRole');
-      if (role === 'ADMIN' || role === 'PROFESSOR') return role;
-    }
-  }
-  return userRole;
-}
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [simulatedRole, setSimulatedRoleState] = useState<SimulatedRole>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('testMode');
-      if (saved === 'true') {
-        return (localStorage.getItem('testModeRole') as SimulatedRole) || null;
-      }
-    }
-    return null;
-  });
+  const [simulatedRole, setSimulatedRoleState] = useState<SimulatedRole>(null);
 
-  const effectiveRole = useMemo(() => readEffectiveRole(user?.role), [user?.role, simulatedRole]);
+  const isAdmin = user?.role === 'ADMIN';
+
+  const effectiveRole = useMemo(() => {
+    if (isAdmin && simulatedRole) return simulatedRole;
+    return user?.role;
+  }, [user?.role, simulatedRole, isAdmin]);
 
   const setSimulatedRole = useCallback((role: SimulatedRole) => {
+    localStorage.setItem('simulatedRole', role || '');
     setSimulatedRoleState(role);
-    if (role) {
-      localStorage.setItem('testMode', 'true');
-      localStorage.setItem('testModeRole', role);
-    } else {
-      localStorage.removeItem('testMode');
-      localStorage.removeItem('testModeRole');
-    }
   }, []);
 
   const fetchUser = async () => {
@@ -67,8 +49,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (response.ok) {
         const data = await response.json();
         setUser(data.user);
+        const saved = localStorage.getItem('simulatedRole');
+        if (saved && data.user?.role === 'ADMIN') {
+          setSimulatedRoleState(saved as SimulatedRole);
+        } else {
+          localStorage.removeItem('simulatedRole');
+          setSimulatedRoleState(null);
+        }
       } else {
         setUser(null);
+        setSimulatedRoleState(null);
+        localStorage.removeItem('simulatedRole');
       }
     } catch (err) {
       console.error("Error fetching user session:", err);
@@ -108,6 +99,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
       setUser(null);
+      setSimulatedRoleState(null);
+      localStorage.removeItem('simulatedRole');
     } catch (error) {
       console.error("Error signing out:", error);
     }

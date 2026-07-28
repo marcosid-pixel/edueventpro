@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Mail, Lock, ArrowRight, CheckCircle2 } from 'lucide-react';
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
+import { Button } from '../components/ui/button';
 
 const ResetPasswordView = () => {
   const [password, setPassword] = useState('');
@@ -58,9 +59,9 @@ const ResetPasswordView = () => {
             </div>
             <h2 className="text-2xl font-black text-text-primary mb-2">Senha Atualizada!</h2>
             <p className="text-text-secondary text-sm mb-8">Sua nova senha foi cadastrada com sucesso. Agora você já pode acessar o sistema.</p>
-            <a href="/" className="w-full bg-secondary text-white py-4 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-secondary/90 transition-all">
-              Fazer Login <ArrowRight size={18} />
-            </a>
+            <Button asChild className="w-full bg-secondary text-white py-4 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-secondary/90 transition-all">
+              <a href="/">Fazer Login <ArrowRight size={18} /></a>
+            </Button>
           </motion.div>
         </div>
       </div>
@@ -109,13 +110,13 @@ const ResetPasswordView = () => {
               </div>
             </div>
 
-            <button
+            <Button
               type="submit"
               disabled={isLoading || !token}
               className="w-full bg-secondary text-white py-4 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-secondary/90 transition-all shadow-lg shadow-secondary/25 hover:shadow-xl hover:shadow-secondary/30 disabled:opacity-50"
             >
               {isLoading ? 'Salvando...' : 'ATUALIZAR SENHA'} <ArrowRight size={18} />
-            </button>
+            </Button>
           </form>
         </motion.div>
       </div>

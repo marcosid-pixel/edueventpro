@@ -4,9 +4,10 @@ import type { AcademicEvent } from '../../types';
 
 interface NextEventCardProps {
   filteredEvents: AcademicEvent[];
+  className?: string;
 }
 
-const NextEventCard = ({ filteredEvents }: NextEventCardProps) => {
+const NextEventCard = ({ filteredEvents, className = '' }: NextEventCardProps) => {
   const now = new Date();
   const todayStr = now.toISOString().split('T')[0];
   const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -32,33 +33,33 @@ const NextEventCard = ({ filteredEvents }: NextEventCardProps) => {
   };
 
   return (
-    <div className="bg-card-bg rounded-2xl border border-outline-variant/50 p-5 shadow-xs h-full">
-      <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider mb-4">Próximos Eventos</h3>
-      <div className="space-y-3">
+    <div className={`bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm h-[204px] flex flex-col ${className}`}>
+      <h3 className="text-xs font-bold text-slate-800 dark:text-white uppercase tracking-wider mb-4">Próximos Eventos</h3>
+      <div className="space-y-3 flex-1 overflow-y-auto min-h-0">
         {futureEvents.length === 0 ? (
           <div className="py-6 text-center">
-            <Clock size={24} className="mx-auto mb-2 text-text-secondary opacity-40" />
-            <p className="text-xs text-text-secondary italic">Nenhum evento futuro</p>
+            <Clock size={24} className="mx-auto mb-2 text-slate-400 dark:text-slate-500 opacity-40" />
+            <p className="text-xs text-slate-500 dark:text-slate-400 italic">Nenhum evento futuro</p>
           </div>
         ) : (
           futureEvents.map(event => {
             const cs = getCourseStyle(event.course);
             return (
-              <div key={event.id} className="flex items-start gap-3 p-3 rounded-xl bg-surface-container/40 border border-outline-variant/40 hover:bg-surface-container/60 transition-colors">
+              <div key={event.id} className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
                 <div className={`w-10 h-10 rounded-xl ${cs.bg} ${cs.color} flex items-center justify-center shrink-0 border ${cs.border}`}>
                   <cs.icon size={18} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-text-primary line-clamp-1">{event.title}</p>
+                  <p className="text-xs font-bold text-slate-800 dark:text-white line-clamp-1">{event.title}</p>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[10px] font-mono text-text-secondary">{event.timeStart || '--:--'} - {event.timeEnd || '--:--'}</span>
-                    <span className="text-[10px] text-text-secondary opacity-50">|</span>
-                    <span className="text-[10px] text-text-secondary">{formatDate(event.date)}</span>
+                    <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">{event.timeStart || '--:--'} - {event.timeEnd || '--:--'}</span>
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500 opacity-50">|</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">{formatDate(event.date)}</span>
                   </div>
                   {event.location && (
                     <div className="flex items-center gap-1 mt-1">
-                      <MapPin size={10} className="text-text-secondary opacity-60" />
-                      <span className="text-[10px] text-text-secondary line-clamp-1">{event.location}</span>
+                      <MapPin size={10} className="text-slate-400 dark:text-slate-500 opacity-60" />
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1">{event.location}</span>
                     </div>
                   )}
                 </div>

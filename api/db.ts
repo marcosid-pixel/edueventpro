@@ -9,7 +9,11 @@ export const turso = createClient({
   authToken: process.env.TURSO_AUTH_TOKEN,
 });
 
+let dbInitialized = false;
+
 export async function initDb() {
+  if (dbInitialized) return;
+  
   try {
     await turso.execute(`
       CREATE TABLE IF NOT EXISTS users (
@@ -45,9 +49,13 @@ export async function initDb() {
       { table: 'events', column: 'speaker', type: 'TEXT' },
       { table: 'events', column: 'cancelReason', type: 'TEXT' },
       { table: 'events', column: 'operationalStatus', type: 'TEXT' },
+      { table: 'events', column: 'meetLink', type: 'TEXT' },
+      { table: 'events', column: 'precisa_arte', type: 'BOOLEAN DEFAULT 0' },
       { table: 'notifications', column: 'isRead', type: 'INTEGER DEFAULT 0' },
       { table: 'activity_logs', column: 'userRole', type: "TEXT DEFAULT 'PROFESSOR'" },
       { table: 'activity_logs', column: 'userPhotoURL', type: 'TEXT' },
+      { table: 'users', column: 'workStart', type: "TEXT DEFAULT '09:00'" },
+      { table: 'users', column: 'workEnd', type: "TEXT DEFAULT '18:00'" },
     ];
 
     for (const item of columnsToEnsure) {
@@ -121,6 +129,18 @@ export async function initDb() {
     `);
 
     await turso.execute(`
+      CREATE TABLE IF NOT EXISTS confirmation_tokens (
+        id TEXT PRIMARY KEY,
+        eventId TEXT NOT NULL,
+        userId TEXT NOT NULL,
+        token TEXT UNIQUE NOT NULL,
+        used INTEGER DEFAULT 0,
+        expiresAt DATETIME NOT NULL,
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await turso.execute(`
       CREATE TABLE IF NOT EXISTS activity_logs (
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
@@ -177,6 +197,7 @@ export async function initDb() {
     }
 
     console.log("Database initialized and admin access verified");
+    dbInitialized = true;
   } catch (error) {
     console.error("Database init error:", error);
   }

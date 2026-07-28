@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Mail, Lock, GraduationCap, Moon, Sun, ArrowRight, Monitor, Cpu, UserPlus } from 'lucide-react';
+import { Mail, Lock, GraduationCap, Moon, Sun, ArrowRight, Cpu, UserPlus, Shield } from 'lucide-react';
 import { motion } from 'motion/react';
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { Button } from '../components/ui/button';
 import type { View } from '../types';
 
 const LoginView = ({ setView }: { setView: (v: View) => void }) => {
@@ -53,12 +54,14 @@ const LoginView = ({ setView }: { setView: (v: View) => void }) => {
 
       {/* Botão de tema */}
       <div className="absolute top-6 right-6 z-50">
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={toggleTheme}
-          className="p-2.5 bg-card-bg/10 border border-outline-variant/20 rounded-full text-text-primary/60 hover:text-text-primary hover:bg-card-bg/20 transition-all backdrop-blur-xl"
+          className="rounded-full"
         >
           {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
-        </button>
+        </Button>
       </div>
 
       {/* ── PAINEL ESQUERDO ── */}
@@ -226,9 +229,10 @@ const LoginView = ({ setView }: { setView: (v: View) => void }) => {
               </div>
             </div>
 
-            <button
+            <Button
               type="submit"
               disabled={loading}
+              size="lg"
               className="w-full h-16 bg-indigo-core hover:bg-indigo-core/90 text-white rounded-xl font-mono font-black shadow-[0_20px_40px_-10px_rgba(33,112,228,0.3)] transition-all text-lg active:scale-[0.98] group relative overflow-hidden uppercase tracking-[0.2em]"
             >
               <div className="relative z-10 flex items-center justify-center gap-3">
@@ -240,7 +244,7 @@ const LoginView = ({ setView }: { setView: (v: View) => void }) => {
                 )}
               </div>
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-            </button>
+            </Button>
           </form>
 
           {/* Registro */}
@@ -249,21 +253,22 @@ const LoginView = ({ setView }: { setView: (v: View) => void }) => {
               <p className="text-xs font-medium text-text-secondary text-center">
                 Não possui credenciais de acesso?
               </p>
-              <button
+              <Button
+                variant="outline"
                 onClick={() => setView('signup')}
-                className="w-full h-12 bg-surface-container dark:bg-white/5 border border-outline-variant/30 hover:border-indigo-core hover:text-indigo-core text-text-primary rounded-xl font-black transition-all flex items-center justify-center gap-3 group uppercase tracking-widest text-xs"
+                className="w-full h-12 border-outline-variant/30 hover:border-indigo-core hover:text-indigo-core rounded-xl font-black transition-all flex items-center justify-center gap-3 group uppercase tracking-widest text-xs"
               >
                 <UserPlus size={16} className="group-hover:scale-110 transition-transform" />
                 Solicitar Novo Acesso
-              </button>
+              </Button>
             </div>
 
             <div className="flex justify-between items-center text-text-secondary/40">
               <div className="flex items-center gap-2">
-                <Monitor size={14} />
-                <p className="text-[9px] font-mono tracking-[0.2em] uppercase font-bold">SAI v5.2.0-ESTÁVEL</p>
+<Shield size={14} />
+              <p className="text-xs font-mono tracking-[0.2em] uppercase font-bold">SAI v5.2.0-ESTÁVEL</p>
               </div>
-              <p className="text-[9px] font-mono tracking-[0.2em] uppercase font-bold">© 2024</p>
+              <p className="text-xs font-mono tracking-[0.2em] uppercase font-bold">© 2026</p>
             </div>
           </div>
         </motion.div>

@@ -16,15 +16,18 @@ import {
   Users,
   UserPlus,
   Info as InfoIcon,
-  Check
+  Check,
+  FlaskConical,
+  ToggleLeft,
+  ToggleRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import { useRealtimeCollection } from '../hooks/useRealtimeCollection';
 import type { View, AcademicEvent, Course, User } from '../types';
 import { EVENT_CATEGORIES, ACADEMIC_COURSES } from '../constants';
-import { parseCategories, isTestMode, apiPost, parseJsonArray, getEventConfirmationState } from '../utils/index';
+import { parseCategories, isTestMode, apiPost, parseJsonArray, getEventConfirmationState, toLocalDateStr } from '../utils/index';
 
 const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initialData?: AcademicEvent | null }) => {
   const { user, effectiveRole } = useAuth();
@@ -54,6 +57,7 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
 
   const [showLogistics, setShowLogistics] = useState(initialData?.plataforma_meet || initialData?.plataforma_comapos || false);
   const [showAdvanced, setShowAdvanced] = useState(initialData?.convidado_externo || initialData?.precisa_cabine || false);
+  const [allowNoTeacher, setAllowNoTeacher] = useState(false);
   
   const [formData, setFormData] = useState({
     title: initialData?.title || '',
@@ -162,7 +166,7 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
       toast('Aula reagendada com sucesso!');
       setShowRescheduleModal(false);
       setRescheduleReason('');
-      setView('unified-calendar');
+      setView('courses');
     } catch (err) {
       console.error(err);
       toast('Erro ao reagendar a aula');
@@ -172,12 +176,6 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
   };
 
   const handleSubmit = async () => {
-    // Regra: Professor não cria do zero
-    if (!isEditing && isProfessor) {
-      toast('Apenas administradores podem realizar essa alteração.');
-      return;
-    }
-
     if (!formData.title || !formData.date) return toast('Título e data são obrigatórios');
     
     // Regra: Descrição min 20 caracteres para admin, 150 para professor na criação
@@ -197,7 +195,7 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
           title: suffix ? `${formData.title} (${suffix})` : formData.title,
           date,
           time: `${formData.timeStart} - ${formData.timeEnd}`,
-          status: isCreate ? 'Confirmed' : (initialData?.status || 'Confirmed'),
+          status: isCreate ? 'Scheduled' : (initialData?.status || 'Scheduled'),
           createdBy: isCreate ? user?.id : initialData?.createdBy,
           teacher: formData.teacher || (isCreate ? user?.displayName : initialData?.teacher),
           notificar_admin: isProfessor && isEditing ? 1 : 0,
@@ -235,7 +233,7 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
         for (let i = 0; i < formData.recurringWeeks; i++) {
           const nextDate = new Date(baseDate);
           nextDate.setDate(baseDate.getDate() + (i * 7));
-          const dateStr = nextDate.toISOString().split('T')[0];
+          const dateStr = toLocalDateStr(nextDate);
           // Novo padrão: "Titulo do Evento (Aula X)"
           await createEvent(dateStr, `Aula ${i + 1}`, bId);
         }
@@ -365,7 +363,7 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
       }
       
       toast(isCreate ? 'Evento cadastrado com sucesso!' : 'Evento atualizado com sucesso!');
-      setView('unified-calendar');
+      setView('courses');
     } catch (error: any) {
       console.error("Error adding event:", error);
       toast('Erro ao salvar evento: ' + (error.message || 'Erro desconhecido'));
@@ -412,7 +410,7 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
                            const response = await fetch(`/api/events_update/${initialData.id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'Confirmed' }) });
                            if (!response.ok) throw new Error();
                            toast('Aula confirmada com sucesso!');
-                           setView('unified-calendar');
+                           setView('courses');
                          } catch (err) { toast('Erro ao confirmar aula'); } finally { setLoading(false); }
                       }}
                       className="px-6 py-2 bg-green-500/10 text-green-600 border border-green-500/20 font-bold text-xs rounded-lg hover:bg-green-500/20 transition-all font-headline tracking-wide uppercase flex items-center gap-2"
@@ -473,7 +471,7 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
                         })
                       });
                       toast('Solicitação enviada! O administrador será notificado.');
-                      setView('unified-calendar');
+                      setView('courses');
                     } catch (err) { toast('Erro ao enviar solicitação'); } finally { setLoading(false); }
                   }}
                   className="px-6 py-2 bg-orange-500/10 text-orange-600 border border-orange-500/20 font-bold text-xs rounded-lg hover:bg-orange-500/20 transition-all font-headline tracking-wide uppercase flex items-center gap-2"
@@ -520,7 +518,7 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
                           })
                         });
                         toast('Evento excluído!');
-                        setView('unified-calendar');
+                        setView('courses');
                       } catch (err) { console.error(err); toast('Erro ao excluir evento'); } finally { setLoading(false); }
                     }
                   }}
@@ -676,7 +674,7 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
                         toast('Aula cancelada com sucesso!');
                         setShowCancelModal(false);
                         setCancelReason('');
-                        setView('unified-calendar');
+                        setView('courses');
                       } catch (err) {
                         console.error(err);
                         toast('Erro ao cancelar a aula');
@@ -857,9 +855,8 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
                   <label className="text-[11px] font-bold uppercase tracking-wider block ml-1">Tipo de Evento</label>
                   <select 
                     value={formData.type}
-                    disabled={isProfessor}
                     onChange={(e) => setFormData({...formData, type: e.target.value})}
-                    className="w-full h-11 border border-outline-variant rounded-lg bg-surface-container px-3 text-sm focus:ring-2 focus:ring-secondary-container transition-all outline-none text-text-primary disabled:opacity-60"
+                    className="w-full h-11 border border-outline-variant rounded-lg bg-surface-container px-3 text-sm focus:ring-2 focus:ring-secondary-container transition-all outline-none text-text-primary"
                   >
                     {EVENT_CATEGORIES.map(cat => (
                       <option key={cat} value={cat}>{cat}</option>
@@ -870,9 +867,8 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
                   <label className="text-[11px] font-bold uppercase tracking-wider block ml-1">Título do Evento</label>
                   <input 
                     value={formData.title}
-                    disabled={isProfessor}
                     onChange={(e) => setFormData({...formData, title: e.target.value})}
-                    className="w-full h-11 border border-outline-variant rounded-lg bg-surface-container px-3 text-sm focus:ring-2 focus:ring-secondary-container transition-all outline-none text-text-primary disabled:opacity-60" 
+                    className="w-full h-11 border border-outline-variant rounded-lg bg-surface-container px-3 text-sm focus:ring-2 focus:ring-secondary-container transition-all outline-none text-text-primary" 
                     placeholder="Ex: IA na Medicina" 
                   />
                 </div>
@@ -882,9 +878,8 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
                   <label className="text-[11px] font-bold uppercase tracking-wider block ml-1">Curso Relacionado</label>
                   <select 
                     value={formData.course}
-                    disabled={isProfessor}
                     onChange={(e) => setFormData({...formData, course: e.target.value, category: ''})}
-                    className="w-full h-11 border border-outline-variant rounded-lg bg-surface-container px-3 text-sm focus:ring-2 focus:ring-secondary-container outline-none text-text-primary disabled:opacity-60"
+                    className="w-full h-11 border border-outline-variant rounded-lg bg-surface-container px-3 text-sm focus:ring-2 focus:ring-secondary-container outline-none text-text-primary"
                   >
                     <option value="">Selecione um curso...</option>
                     {allAvailableCourseNames.map(name => (
@@ -897,7 +892,7 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
                   <div className="relative group">
                     <select 
                       value={formData.category}
-                      disabled={isProfessor || !formData.course}
+                      disabled={!formData.course}
                       onChange={(e) => {
                         if (e.target.value === 'NEW_CATEGORY') {
                           const newCat = prompt('Digite o nome da nova categoria tecnológica/acadêmica:');
@@ -931,45 +926,98 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
               </div>
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-1.5 text-text-secondary">
-                  <label className="text-[11px] font-bold uppercase tracking-wider block ml-1">Professor Responsável</label>
-                  <div className="relative group">
-                    <select 
-                      value={formData.teacher}
-                      disabled={isProfessor || !formData.course}
-                      onChange={(e) => setFormData({...formData, teacher: e.target.value})}
-                      className="w-full h-11 border border-outline-variant rounded-lg bg-surface-container px-3 text-sm focus:ring-2 focus:ring-secondary-container outline-none text-text-primary disabled:opacity-60 appearance-none pr-10"
-                    >
-                      <option value="">Selecione um professor...</option>
-                      {users
-                        .filter(u => {
-                          if (u.role === 'ADMIN') return true;
-                          
-                          const courseIdStr = u.courseId ? String(u.courseId) : '';
-                          const course = courses.find(c => c.name === formData.course);
-                          
-                          // Check robustly if the user is assigned to this course (by ID or Name)
-                          // This also covers cases where the course exists dynamically (string name) but not in the DB
-                          const matchesName = formData.course && courseIdStr.toLowerCase().includes(formData.course.toLowerCase());
-                          const matchesId = course && courseIdStr.includes(course.id);
-                          
-                          return matchesName || matchesId;
-                        })
-                        .sort((a, b) => a.displayName.localeCompare(b.displayName))
-                        .map(u => (
-                          <option key={u.id} value={u.displayName}>{u.displayName} ({u.role})</option>
-                        ))
-                      }
-                    </select>
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-secondary">
-                      <ChevronDown size={14} />
-                    </div>
+                  <div className="flex items-center justify-between ml-1 mb-1">
+                    <label className="text-[11px] font-bold uppercase tracking-wider">Professor Responsável</label>
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAllowNoTeacher(!allowNoTeacher);
+                          if (!allowNoTeacher) {
+                            setFormData({...formData, teacher: ''});
+                          }
+                        }}
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-all"
+                        title="Criar eventos sem professor cadastrado (modo teste)"
+                      >
+                        {allowNoTeacher ? (
+                          <ToggleRight size={14} className="text-purple-500" />
+                        ) : (
+                          <ToggleLeft size={14} className="text-slate-400" />
+                        )}
+                        <FlaskConical size={10} className="text-purple-500" />
+                        <span className="text-[8px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">Modo Teste</span>
+                      </button>
+                    )}
                   </div>
-                  {!formData.course && <p className="text-[9px] text-text-secondary italic ml-1">* Selecione o curso primeiro</p>}
+                  
+                  {allowNoTeacher ? (
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={formData.teacher}
+                        onChange={(e) => setFormData({...formData, teacher: e.target.value})}
+                        placeholder="Digite o nome do professor (fictício)..."
+                        className="w-full h-11 border-2 border-purple-300 dark:border-purple-700 rounded-lg bg-purple-50/50 dark:bg-purple-950/20 px-3 text-sm focus:ring-2 focus:ring-purple-400 outline-none text-text-primary pr-10"
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-purple-400">
+                        <FlaskConical size={14} />
+                      </div>
+                      <p className="text-[8px] text-purple-500 dark:text-purple-400 font-bold mt-1 ml-1 uppercase tracking-wider">
+                        Modo teste ativo — professor não precisa estar cadastrado
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="relative group">
+                      <select 
+                        value={formData.teacher}
+                        disabled={!formData.course}
+                        onChange={(e) => setFormData({...formData, teacher: e.target.value})}
+                        className="w-full h-11 border border-outline-variant rounded-lg bg-surface-container px-3 text-sm focus:ring-2 focus:ring-secondary-container outline-none text-text-primary appearance-none pr-10"
+                      >
+                        <option value="">Selecione um professor...</option>
+                        {users
+                          .filter(u => {
+                            // O professor logado SEMPRE aparece na lista
+                            if (u.id === user?.id) return true;
+
+                            const userCourseIds = parseJsonArray(u.courseId);
+
+                            // Se o professor NÃO tem courseId vinculado, ele aparece para qualquer curso (disponível)
+                            if (userCourseIds.length === 0) return true;
+
+                            // Se tem courseId, só aparece se bater com o curso selecionado
+                            const course = courses.find(c => c.name === formData.course);
+                            const courseIdAuto = `auto_${formData.course}`;
+
+                            return userCourseIds.some(id =>
+                              id === formData.course ||
+                              id === courseIdAuto ||
+                              (course && id === course.id) ||
+                              id.toLowerCase().includes(formData.course.toLowerCase()) ||
+                              formData.course.toLowerCase().includes(id.toLowerCase())
+                            );
+                          })
+                          .sort((a, b) => a.displayName.localeCompare(b.displayName))
+                          .map(u => (
+                            <option key={u.id} value={u.displayName}>{u.displayName} ({u.role})</option>
+                          ))
+                        }
+                      </select>
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-secondary">
+                        <ChevronDown size={14} />
+                      </div>
+                    </div>
+                  )}
+                  {!formData.course && !allowNoTeacher && <p className="text-[9px] text-text-secondary italic ml-1">* Selecione o curso primeiro</p>}
                 </div>
                 <div className="space-y-1.5 text-text-secondary opacity-50">
                    <label className="text-[11px] font-bold uppercase tracking-wider block ml-1">ID Fiscal / Matrícula</label>
                    <div className="w-full h-11 border border-outline-variant rounded-lg bg-surface-container px-3 flex items-center text-xs font-mono">
-                      {users.find(u => u.displayName === formData.teacher)?.id.substring(0,8).toUpperCase() || '---'}
+                      {allowNoTeacher
+                        ? <span className="text-purple-400 italic">Modo teste</span>
+                        : (users.find(u => u.displayName === formData.teacher)?.id.substring(0,8).toUpperCase() || '---')
+                      }
                    </div>
                 </div>
               </div>
@@ -982,9 +1030,8 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
                 </div>
                 <textarea 
                   value={formData.description}
-                  disabled={isProfessor}
                   onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  className="w-full border border-outline-variant rounded-lg bg-surface-container p-4 text-sm focus:ring-2 focus:ring-secondary-container transition-all outline-none resize-none h-32 text-text-primary disabled:opacity-60" 
+                  className="w-full border border-outline-variant rounded-lg bg-surface-container p-4 text-sm focus:ring-2 focus:ring-secondary-container transition-all outline-none resize-none h-32 text-text-primary" 
                   placeholder="Descreva os objetivos acadêmicos da atividade (mínimo 150 caracteres)..."
                 ></textarea>
                 <p className="text-right text-[10px] text-text-secondary font-mono font-medium italic mt-1">Obrigatório detalhamento técnico completo.</p>
