@@ -47,14 +47,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const response = await fetch('/api/auth/me');
       if (response.ok) {
-        const data = await response.json();
-        setUser(data.user);
-        const saved = localStorage.getItem('simulatedRole');
-        if (saved && data.user?.role === 'ADMIN') {
-          setSimulatedRoleState(saved as SimulatedRole);
-        } else {
-          localStorage.removeItem('simulatedRole');
-          setSimulatedRoleState(null);
+        const text = await response.text();
+        try {
+          const data = JSON.parse(text);
+          setUser(data.user);
+          const saved = localStorage.getItem('simulatedRole');
+          if (saved && data.user?.role === 'ADMIN') {
+            setSimulatedRoleState(saved as SimulatedRole);
+          } else {
+            localStorage.removeItem('simulatedRole');
+            setSimulatedRoleState(null);
+          }
+        } catch {
+          console.error("Resposta do servidor não é JSON:", text.slice(0, 200));
+          setUser(null);
         }
       } else {
         setUser(null);
@@ -79,7 +85,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(credentials)
     });
-    const data = await response.json();
+    const text = await response.text();
+    let data: any;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error("Servidor indisponível. Verifique a configuração do banco de dados.");
+    }
     if (!response.ok) throw new Error(data.error || 'Falha no login');
     setUser(data.user);
   };
@@ -90,7 +102,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(formData)
     });
-    const data = await response.json();
+    const text = await response.text();
+    let data: any;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error("Servidor indisponível. Verifique a configuração do banco de dados.");
+    }
     if (!response.ok) throw new Error(data.error || 'Falha no cadastro');
     setUser(data.user);
   };

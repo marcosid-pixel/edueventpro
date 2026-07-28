@@ -1,12 +1,16 @@
 import { createClient } from "@libsql/client";
 import bcrypt from "bcryptjs";
-import dotenv from "dotenv";
 
-dotenv.config();
+const TURSO_URL = process.env.TURSO_DATABASE_URL;
+const TURSO_TOKEN = process.env.TURSO_AUTH_TOKEN;
+
+if (!TURSO_URL) {
+  console.error("[db] TURSO_DATABASE_URL não está definido. Configure a variável de ambiente no Vercel (Settings → Environment Variables).");
+}
 
 export const turso = createClient({
-  url: process.env.TURSO_DATABASE_URL || "file:local.db",
-  authToken: process.env.TURSO_AUTH_TOKEN,
+  url: TURSO_URL || "file:local.db",
+  authToken: TURSO_TOKEN,
 });
 
 let dbInitialized = false;
