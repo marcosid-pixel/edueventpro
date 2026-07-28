@@ -178,8 +178,8 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
   const handleSubmit = async () => {
     if (!formData.title || !formData.date) return toast('Título e data são obrigatórios');
     
-    // Regra: Descrição min 20 caracteres para admin, 150 para professor na criação
-    const minDesc = isAdmin ? 20 : 150;
+    // Regra: Descrição min 20 caracteres para admin ou modo teste, 150 para professor na criação
+    const minDesc = (isAdmin || allowNoTeacher) ? 20 : 150;
     if (!isEditing && formData.description.length < minDesc) {
       toast(`A descrição deve ter no mínimo ${minDesc} caracteres. Atual: ${formData.description.length}. Por favor, detalhe mais os objetivos acadêmicos.`);
       return;
@@ -928,7 +928,7 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
                 <div className="space-y-1.5 text-text-secondary">
                   <div className="flex items-center justify-between ml-1 mb-1">
                     <label className="text-[11px] font-bold uppercase tracking-wider">Professor Responsável</label>
-                    {isAdmin && (
+                    {user?.role === 'ADMIN' && (
                       <button
                         type="button"
                         onClick={() => {
