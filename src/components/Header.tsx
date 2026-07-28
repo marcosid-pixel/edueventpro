@@ -108,10 +108,8 @@ export const Header = ({ setView, currentView, onNewEvent }: { setView: (v: View
                         onClick={() => {
                           if (isSimulated) {
                             setSimulatedRole(null);
-                            window.location.reload();
                           } else {
                             setSimulatedRole('PROFESSOR');
-                            window.location.reload();
                           }
                           setShowTestMenu(false);
                         }}
@@ -128,7 +126,6 @@ export const Header = ({ setView, currentView, onNewEvent }: { setView: (v: View
                           <button
                             onClick={() => {
                               setSimulatedRole('PROFESSOR');
-                              window.location.reload();
                               setShowTestMenu(false);
                             }}
                             className={`w-full text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all ${
@@ -142,7 +139,6 @@ export const Header = ({ setView, currentView, onNewEvent }: { setView: (v: View
                           <button
                             onClick={() => {
                               setSimulatedRole('ADMIN');
-                              window.location.reload();
                               setShowTestMenu(false);
                             }}
                             className={`w-full text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all ${

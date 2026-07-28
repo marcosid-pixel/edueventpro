@@ -142,10 +142,8 @@ const ProfileSidebar = ({ user, effectiveRole, filteredEvents, allEvents, course
               onClick={() => {
                 if (isSimulated) {
                   setSimulatedRole(null);
-                  window.location.reload();
                 } else {
                   setSimulatedRole('PROFESSOR');
-                  window.location.reload();
                 }
               }}
               className={`relative w-10 h-5 rounded-full transition-all duration-300 ${isSimulated ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-600'}`}
@@ -162,7 +160,7 @@ const ProfileSidebar = ({ user, effectiveRole, filteredEvents, allEvents, course
           {isSimulated && (
             <div className="flex gap-1.5 mt-2">
               <button
-                onClick={() => { setSimulatedRole('PROFESSOR'); window.location.reload(); }}
+                onClick={() => setSimulatedRole('PROFESSOR')}
                 className={`flex-1 py-1.5 px-2 text-[9px] font-bold uppercase tracking-wider rounded-lg transition-all border ${
                   simulatedRole === 'PROFESSOR'
                     ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30'
@@ -172,7 +170,7 @@ const ProfileSidebar = ({ user, effectiveRole, filteredEvents, allEvents, course
                 Professor
               </button>
               <button
-                onClick={() => { setSimulatedRole('ADMIN'); window.location.reload(); }}
+                onClick={() => setSimulatedRole('ADMIN')}
                 className={`flex-1 py-1.5 px-2 text-[9px] font-bold uppercase tracking-wider rounded-lg transition-all border ${
                   simulatedRole === 'ADMIN'
                     ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30'

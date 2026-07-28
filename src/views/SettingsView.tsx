@@ -275,11 +275,9 @@ const SettingsView = () => {
                     if (simulatedRole) {
                       setSimulatedRole(null);
                       toast('Modo teste desativado. Painel restaurado ao seu papel original.');
-                      window.location.reload();
                     } else {
                       setSimulatedRole('PROFESSOR');
                       toast('Modo teste ativado. Visualizando como Professor(a). Abas e permissões foram ajustadas.');
-                      window.location.reload();
                     }
                   }}
                   className={`relative w-12 h-6 rounded-full transition-all duration-300 ${simulatedRole ? 'bg-amber-500 shadow-inner' : 'bg-surface-container-hover border border-outline-variant'}`}
@@ -301,7 +299,6 @@ const SettingsView = () => {
                       onClick={() => {
                         setSimulatedRole('PROFESSOR');
                         toast('Agora simulando como Professor(a)');
-                        window.location.reload();
                       }}
                       className={`flex-1 py-2 px-3 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all border ${
                         simulatedRole === 'PROFESSOR'
@@ -315,7 +312,6 @@ const SettingsView = () => {
                       onClick={() => {
                         setSimulatedRole('ADMIN');
                         toast('Agora simulando como Administrador');
-                        window.location.reload();
                       }}
                       className={`flex-1 py-2 px-3 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all border ${
                         simulatedRole === 'ADMIN'
