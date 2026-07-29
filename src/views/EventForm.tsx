@@ -106,7 +106,7 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
         .filter(e => e.batchId === effectiveBatchId)
         .sort((a, b) => a.date.localeCompare(b.date))
     : [];
-  const isBatch = batchEvents.length > 1;
+  const isBatch = !!effectiveBatchId;
 
   const openRescheduleModal = () => {
     setNewRescheduleDate(formData.date);
