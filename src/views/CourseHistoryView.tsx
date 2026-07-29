@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ChevronRight, History, Clock, CheckCircle2, Calendar, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useRealtimeCollection } from '../hooks/useRealtimeCollection';
-import { isEventExpired, getCourseStyle, getEventConfirmationState } from '../utils/index';
+import { isEventExpired, getCourseStyle, getEventConfirmationState, parseCourses, coursesMatch } from '../utils/index';
 import type { View, AcademicEvent } from '../types';
 
 const CourseHistoryView = ({ setView, onEdit }: { setView: (v: View) => void, onEdit?: (e: AcademicEvent) => void }) => {
@@ -25,9 +25,16 @@ const CourseHistoryView = ({ setView, onEdit }: { setView: (v: View) => void, on
   ).sort((a, b) => b.date.localeCompare(a.date));
 
   const groupedByCourse = filtered.reduce((acc, event) => {
-    const course = event.course || 'Sem Departamento';
-    if (!acc[course]) acc[course] = [];
-    acc[course].push(event);
+    const courses = parseCourses(event.course);
+    if (courses.length === 0) {
+      if (!acc['Sem Departamento']) acc['Sem Departamento'] = [];
+      acc['Sem Departamento'].push(event);
+    } else {
+      courses.forEach(course => {
+        if (!acc[course]) acc[course] = [];
+        acc[course].push(event);
+      });
+    }
     return acc;
   }, {} as Record<string, AcademicEvent[]>);
 

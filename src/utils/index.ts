@@ -9,6 +9,58 @@ export function toLocalDateStr(date: Date): string {
 }
 import { Dna, Atom, Calculator, Beaker, Stethoscope, Cpu, Languages, Globe2, Palette, Scale, TrendingUp, GraduationCap } from 'lucide-react';
 
+export const parseCourses = (courseStr: string = ''): string[] => {
+  if (!courseStr) return [];
+  return courseStr.split(',').map(c => c.trim()).filter(Boolean);
+};
+
+export const coursesMatch = (eventCourse: string, filterCourse: string): boolean => {
+  if (!eventCourse || !filterCourse) return false;
+  return parseCourses(eventCourse).some(c => c.toLowerCase() === filterCourse.toLowerCase());
+};
+
+export const courseAbbreviation = (name: string): string => {
+  const n = name.toLowerCase();
+  if (n.includes('ciência da computação')) return 'CC';
+  if (n.includes('engenharia da computação')) return 'EC';
+  if (n.includes('engenharia civil')) return 'ECiv';
+  if (n.includes('engenharia de produção')) return 'EProd';
+  if (n.includes('engenharia elétrica')) return 'EE';
+  if (n.includes('análise e desenv')) return 'ADS';
+  if (n.includes('sistemas de informação')) return 'SI';
+  if (n.includes('administração')) return 'Adm';
+  if (n.includes('direito')) return 'Dir';
+  if (n.includes('medicina')) return 'Med';
+  if (n.includes('enfermagem')) return 'Enf';
+  if (n.includes('odontologia')) return 'ODO';
+  if (n.includes('nutrição')) return 'Nut';
+  if (n.includes('fisioterapia')) return 'Fisio';
+  if (n.includes('farmácia')) return 'Farm';
+  if (n.includes('biologia')) return 'Bio';
+  if (n.includes('biomedicina')) return 'Biom';
+  if (n.includes('pedagogia')) return 'Ped';
+  if (n.includes('psicologia')) return 'Psi';
+  if (n.includes('letras')) return 'Let';
+  if (n.includes('matemática')) return 'Mat';
+  if (n.includes('história')) return 'Hist';
+  if (n.includes('jornalismo')) return 'JOR';
+  if (n.includes('marketing')) return 'Mkt';
+  if (n.includes('publicidade')) return 'Pub';
+  if (n.includes('recursos humanos')) return 'RH';
+  if (n.includes('teologia')) return 'Teo';
+  if (n.includes('gestão de ti')) return 'GTI';
+  if (n.includes('gestão financeira')) return 'GF';
+  if (n.includes('gestão hospitalar')) return 'GH';
+  if (n.includes('gestão pública')) return 'GP';
+  if (n.includes('contábeis')) return 'CCo';
+  if (n.includes('arquitetura')) return 'Arq';
+  if (n.includes('estética')) return 'Est';
+  if (n.includes('segurança pública')) return 'SP';
+  if (n.includes('serviço social')) return 'SS';
+  if (n.includes('ed. física')) return 'EF';
+  return name.substring(0, 3).toUpperCase();
+};
+
 export const parseCategories = (cats: any) => {
   if (Array.isArray(cats)) return cats;
   if (typeof cats === 'string') {
@@ -60,7 +112,8 @@ export const getEventHours = (event: AcademicEvent): number => {
 export const calculateTotalHours = (evs: AcademicEvent[]) => evs.reduce((sum, ev) => sum + getEventHours(ev), 0);
 
 export const getCourseStyle = (courseName: string = '') => {
-  const name = courseName.toLowerCase();
+  const courses = parseCourses(courseName);
+  const name = (courses[0] || courseName).toLowerCase();
   if (name.includes('biologia')) return { icon: Dna, color: 'text-green-600', bg: 'bg-green-500/10', border: 'border-green-500/40', shadow: 'shadow-green-500/20' };
   if (name.includes('física') || name.includes('fisica')) return { icon: Atom, color: 'text-purple-600', bg: 'bg-purple-500/10', border: 'border-purple-500/40', shadow: 'shadow-purple-500/20' };
   if (name.includes('matemática') || name.includes('matematica')) return { icon: Calculator, color: 'text-blue-600', bg: 'bg-blue-500/10', border: 'border-blue-500/40', shadow: 'shadow-blue-500/20' };

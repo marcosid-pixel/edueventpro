@@ -39,6 +39,7 @@ export const ACADEMIC_COURSES = [
   'Enfermagem',
   'Engenharia Civil',
   'Engenharia de Produção',
+  'Engenharia da Computação',
   'Engenharia Elétrica',
   'Estética e Cosmética',
   'Farmácia',

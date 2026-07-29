@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   ChevronRight,
   CalendarClock,
@@ -21,7 +21,8 @@ import {
   FlaskConical,
   ToggleLeft,
   ToggleRight,
-  Plus
+  Plus,
+  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
@@ -29,7 +30,7 @@ import { useAuth } from '../context/AuthContext';
 import { useRealtimeCollection } from '../hooks/useRealtimeCollection';
 import type { View, AcademicEvent, Course, User } from '../types';
 import { EVENT_CATEGORIES, ACADEMIC_COURSES } from '../constants';
-import { parseCategories, isTestMode, apiPost, parseJsonArray, getEventConfirmationState, toLocalDateStr } from '../utils/index';
+import { parseCategories, isTestMode, apiPost, parseJsonArray, getEventConfirmationState, toLocalDateStr, parseCourses, courseAbbreviation } from '../utils/index';
 
 const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initialData?: AcademicEvent | null }) => {
   const { user, effectiveRole, isAdminOrCoordinator } = useAuth();
@@ -62,11 +63,13 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
   const [allowNoTeacher, setAllowNoTeacher] = useState(false);
   const [teacherSearch, setTeacherSearch] = useState(initialData?.teacher || '');
   const [showTeacherSuggestions, setShowTeacherSuggestions] = useState(false);
-  
+  const [selectedCourses, setSelectedCourses] = useState<string[]>(() => parseCourses(initialData?.course || ''));
+  const [showCourseDropdown, setShowCourseDropdown] = useState(false);
+
   const [formData, setFormData] = useState({
     title: initialData?.title || '',
     type: initialData?.type || 'ENAMED',
-    course: initialData?.course || 'Ciência da Computação',
+    course: initialData?.course || '',
     description: initialData?.description || '',
     date: initialData?.date || '',
     timeStart: initialData?.time?.split(' - ')[0] || '',
@@ -99,6 +102,17 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
   const [newTimeEnd, setNewTimeEnd] = useState(initialData?.time?.split(' - ')[1] || '');
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [rescheduleReason, setRescheduleReason] = useState('');
+  const courseDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (courseDropdownRef.current && !courseDropdownRef.current.contains(e.target as Node)) {
+        setShowCourseDropdown(false);
+      }
+    };
+    if (showCourseDropdown) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showCourseDropdown]);
 
   // Gerenciamento de lote
   const batchEvents = isEditing && effectiveBatchId
@@ -1018,30 +1032,76 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-1.5 text-text-secondary">
-                  <label className="text-[11px] font-bold uppercase tracking-wider block ml-1">Curso Relacionado</label>
-                  <select 
-                    value={formData.course}
-                    onChange={(e) => setFormData({...formData, course: e.target.value, category: ''})}
-                    className="w-full h-11 border border-outline-variant rounded-lg bg-surface-container px-3 text-sm focus:ring-2 focus:ring-secondary-container outline-none text-text-primary"
+                <div ref={courseDropdownRef} className="space-y-1.5 text-text-secondary relative">
+                  <label className="text-[11px] font-bold uppercase tracking-wider block ml-1">Cursos Relacionados</label>
+                  <div
+                    onClick={() => setShowCourseDropdown(!showCourseDropdown)}
+                    className="w-full min-h-[44px] border border-outline-variant rounded-lg bg-surface-container px-3 py-2 text-sm focus:ring-2 focus:ring-secondary-container outline-none text-text-primary cursor-pointer flex flex-wrap items-center gap-1.5"
                   >
-                    <option value="">Selecione um curso...</option>
-                    {allAvailableCourseNames.map(name => (
-                      <option key={name} value={name}>{name}</option>
+                    {selectedCourses.length === 0 && (
+                      <span className="text-text-secondary/60">Selecione cursos...</span>
+                    )}
+                    {selectedCourses.map(c => (
+                      <span key={c} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary/10 text-secondary text-[10px] font-bold border border-secondary/20">
+                        {courseAbbreviation(c)}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const next = selectedCourses.filter(x => x !== c);
+                            setSelectedCourses(next);
+                            setFormData(prev => ({ ...prev, course: next.join(', '), category: '' }));
+                          }}
+                          className="hover:text-red-500 transition-colors"
+                        >
+                          <X size={10} />
+                        </button>
+                      </span>
                     ))}
-                  </select>
+                    <ChevronDown size={14} className={`ml-auto text-text-secondary transition-transform ${showCourseDropdown ? 'rotate-180' : ''}`} />
+                  </div>
+                  {showCourseDropdown && (
+                    <div className="absolute z-50 mt-1 w-full max-h-56 overflow-y-auto bg-card-bg border border-outline-variant rounded-xl shadow-xl p-1.5">
+                      {allAvailableCourseNames.map(name => {
+                        const isSelected = selectedCourses.includes(name);
+                        return (
+                          <label
+                            key={name}
+                            className="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-surface-container/60 cursor-pointer transition-colors"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => {
+                                let next: string[];
+                                if (isSelected) {
+                                  next = selectedCourses.filter(c => c !== name);
+                                } else {
+                                  next = [...selectedCourses, name];
+                                }
+                                setSelectedCourses(next);
+                                setFormData(prev => ({ ...prev, course: next.join(', '), category: '' }));
+                              }}
+                              className="w-3.5 h-3.5 rounded border-outline-variant text-secondary accent-secondary"
+                            />
+                            <span className="text-xs text-text-primary">{name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-1.5 text-text-secondary">
                   <label className="text-[11px] font-bold uppercase tracking-wider block ml-1">Categoria (Filtro)</label>
                   <div className="relative group">
                     <select 
                       value={formData.category}
-                      disabled={!formData.course}
+                      disabled={selectedCourses.length === 0}
                       onChange={(e) => {
                         if (e.target.value === 'NEW_CATEGORY') {
                           const newCat = prompt('Digite o nome da nova categoria tecnológica/acadêmica:');
                           if (newCat) {
-                             const currentCourse = courses.find(c => c.name === formData.course);
+                             const currentCourse = courses.find(c => c.name === selectedCourses[0]);
                              if (currentCourse) {
                                const updatedCats = [...(currentCourse.categories || []), newCat];
                                handleUpdateCourseData(currentCourse.id, { categories: JSON.stringify(updatedCats) });
@@ -1055,10 +1115,10 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
                       className="w-full h-11 border border-outline-variant rounded-lg bg-surface-container px-3 text-sm focus:ring-2 focus:ring-secondary-container outline-none text-text-primary disabled:opacity-60 appearance-none pr-10"
                     >
                       <option value="">Selecione uma categoria...</option>
-                      {parseCategories(courses.find(c => c.name === formData.course)?.categories).map(cat => (
+                      {[...new Set(selectedCourses.flatMap(sc => parseCourses(courses.find(c => c.name === sc)?.categories || '')))].map(cat => (
                         <option key={cat} value={cat}>{cat}</option>
                       ))}
-                      {isAdmin && formData.course && (
+                      {isAdmin && selectedCourses.length > 0 && (
                         <option value="NEW_CATEGORY" className="text-secondary font-bold">+ Cadastrar Nova Categoria...</option>
                       )}
                     </select>
@@ -1139,14 +1199,16 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
                             if (u.id === user?.id) return true;
                             const userCourseIds = parseJsonArray(u.courseId);
                             if (userCourseIds.length === 0) return true;
-                            const course = courses.find(c => c.name === formData.course);
-                            const courseIdAuto = `auto_${formData.course}`;
-                            return userCourseIds.some(id =>
-                              id === formData.course || id === courseIdAuto ||
-                              (course && id === course.id) ||
-                              id.toLowerCase().includes(formData.course.toLowerCase()) ||
-                              formData.course.toLowerCase().includes(id.toLowerCase())
-                            );
+                            return selectedCourses.some(sc => {
+                              const course = courses.find(c => c.name === sc);
+                              const courseIdAuto = `auto_${sc}`;
+                              return userCourseIds.some(id =>
+                                id === sc || id === courseIdAuto ||
+                                (course && id === course.id) ||
+                                id.toLowerCase().includes(sc.toLowerCase()) ||
+                                sc.toLowerCase().includes(id.toLowerCase())
+                              );
+                            });
                           })
                           .filter(u => u.displayName.toLowerCase().includes(teacherSearch.toLowerCase()))
                           .sort((a, b) => a.displayName.localeCompare(b.displayName))
@@ -1173,14 +1235,16 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
                           if (u.id === user?.id) return true;
                           const userCourseIds = parseJsonArray(u.courseId);
                           if (userCourseIds.length === 0) return true;
-                          const course = courses.find(c => c.name === formData.course);
-                          const courseIdAuto = `auto_${formData.course}`;
-                          return userCourseIds.some(id =>
-                            id === formData.course || id === courseIdAuto ||
-                            (course && id === course.id) ||
-                            id.toLowerCase().includes(formData.course.toLowerCase()) ||
-                            formData.course.toLowerCase().includes(id.toLowerCase())
-                          );
+                          return selectedCourses.some(sc => {
+                            const course = courses.find(c => c.name === sc);
+                            const courseIdAuto = `auto_${sc}`;
+                            return userCourseIds.some(id =>
+                              id === sc || id === courseIdAuto ||
+                              (course && id === course.id) ||
+                              id.toLowerCase().includes(sc.toLowerCase()) ||
+                              sc.toLowerCase().includes(id.toLowerCase())
+                            );
+                          });
                         }).filter(u => u.displayName.toLowerCase().includes(teacherSearch.toLowerCase())).length === 0 && (
                           <div className="px-3 py-2 text-[11px] text-text-secondary italic">
                             Nenhum professor encontrado. Pressione Enter para cadastrar como externo.
@@ -1189,7 +1253,7 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
                       </div>
                     )}
                   </div>
-                  {!formData.course && !allowNoTeacher && <p className="text-[9px] text-text-secondary italic ml-1">* Selecione o curso primeiro</p>}
+                  {selectedCourses.length === 0 && !allowNoTeacher && <p className="text-[9px] text-text-secondary italic ml-1">* Selecione o curso primeiro</p>}
                 </div>
                 <div className="space-y-1.5 text-text-secondary opacity-50">
                    <label className="text-[11px] font-bold uppercase tracking-wider block ml-1">ID Fiscal / Matrícula</label>

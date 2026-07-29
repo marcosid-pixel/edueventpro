@@ -20,7 +20,7 @@ import { useAuth } from '../context/AuthContext';
 import { useRealtimeCollection } from '../hooks/useRealtimeCollection';
 import { SkeletonCard } from '../components/Skeleton';
 import { ModernSelectionModal } from '../components/ModernSelectionModal';
-import { parseCategories, parseJsonArray, getCourseStyle, getCategoryStyle, calculateTotalHours, getEventHours, getEventConfirmationState, isEventExpired, canConfirmEvent } from '../utils/index';
+import { parseCategories, parseJsonArray, getCourseStyle, getCategoryStyle, calculateTotalHours, getEventHours, getEventConfirmationState, isEventExpired, canConfirmEvent, coursesMatch, parseCourses } from '../utils/index';
 import { EVENT_CATEGORIES } from '../constants';
 import type { View, AcademicEvent, Course, User, Notification } from '../types';
 
@@ -257,7 +257,7 @@ const CourseManagementView = ({ onEditEvent, setView }: { onEditEvent?: (e: Acad
   };
 
   const handleBulkUpdateEvents = async (courseName: string, field: string, value: any, force = false) => {
-    const courseEvents = events.filter(e => e.course === courseName);
+    const courseEvents = events.filter(e => coursesMatch(e.course, courseName));
     
     let targets = [];
     if (force) {
@@ -328,7 +328,7 @@ const CourseManagementView = ({ onEditEvent, setView }: { onEditEvent?: (e: Acad
 
   const getCourseMembers = (courseName: string, courseId: string) => {
     const directMembers = users.filter(u => u.courseId === courseId);
-    const courseEvents = events.filter(e => e.course === courseName);
+    const courseEvents = events.filter(e => coursesMatch(e.course, courseName));
     const eventTeachers = new Set(courseEvents.map(e => e.teacher).filter(Boolean));
     
     const allDocentes = [...directMembers];
@@ -342,11 +342,11 @@ const CourseManagementView = ({ onEditEvent, setView }: { onEditEvent?: (e: Acad
   };
 
   const getCourseEventsCount = (courseName: string) => {
-    return events.filter(e => e.course === courseName).length;
+    return events.filter(e => coursesMatch(e.course, courseName)).length;
   };
 
   const getCourseBatches = (courseName: string) => {
-    const courseEvents = events.filter(e => e.course === courseName && e.batchId);
+    const courseEvents = events.filter(e => coursesMatch(e.course, courseName) && e.batchId);
     const batches: Record<string, AcademicEvent[]> = {};
     courseEvents.forEach(e => {
       if (e.batchId) {
@@ -742,7 +742,7 @@ const CourseManagementView = ({ onEditEvent, setView }: { onEditEvent?: (e: Acad
                                   try {
                                     await fetch(`/api/courses/${course.id}`, { method: 'DELETE' });
                                     if (confirm("Deseja também EXCLUIR TODAS AS AULAS vinculadas a este curso?")) {
-                                      const courseEvents = events.filter(ev => ev.course === course.name);
+                                      const courseEvents = events.filter(ev => coursesMatch(ev.course, course.name));
                                       for (const ev of courseEvents) {
                                         await fetch(`/api/events_delete/${ev.id}`, { method: 'POST' });
                                       }
@@ -783,7 +783,7 @@ const CourseManagementView = ({ onEditEvent, setView }: { onEditEvent?: (e: Acad
                   )}
                 </div>
                 {(() => {
-                  const courseEvents = events.filter(e => e.course === course.name);
+                  const courseEvents = events.filter(e => coursesMatch(e.course, course.name));
                   const allCats = [...new Set([...parseCategories(course.categories), ...courseEvents.map(e => e.category).filter(Boolean)])];
                   const catCounts = Object.fromEntries(allCats.map(cat => [cat, courseEvents.filter(e => e.category === cat).length]));
                   const uncategorized = courseEvents.filter(e => !e.category).length;
@@ -861,7 +861,7 @@ const CourseManagementView = ({ onEditEvent, setView }: { onEditEvent?: (e: Acad
               </div>
               <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1 scrollbar-thin">
                 {(() => {
-                  const courseEvents = events.filter(e => e.course === course.name);
+                  const courseEvents = events.filter(e => coursesMatch(e.course, course.name));
                   const groups: Record<string, AcademicEvent[]> = {};
                   
                   courseEvents.forEach(e => {
@@ -902,7 +902,7 @@ const CourseManagementView = ({ onEditEvent, setView }: { onEditEvent?: (e: Acad
               <div className="flex items-center gap-3">
                 <span className="text-[9px] font-mono text-text-secondary opacity-50 uppercase">ID: {course.id.substring(0, 8)}</span>
                 {(() => {
-                  const courseEvs = events.filter(e => e.course === course.name);
+                  const courseEvs = events.filter(e => coursesMatch(e.course, course.name));
                   const totalHrs = calculateTotalHours(courseEvs);
                   const avgHrs = courseEvs.length > 0 ? (totalHrs / courseEvs.length) : 0;
                   return (

@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useRealtimeCollection } from '../hooks/useRealtimeCollection';
 import type { AcademicEvent, Course, User, View } from '../types';
 import { EVENT_CATEGORIES } from '../constants';
-import { parseJsonArray, getCourseStyle, toLocalDateStr } from '../utils/index';
+import { parseJsonArray, getCourseStyle, toLocalDateStr, coursesMatch } from '../utils/index';
 
 const PERIODS = [
   { id: 'morning', label: 'MANHÃ', start: '00:00', end: '12:00' },
