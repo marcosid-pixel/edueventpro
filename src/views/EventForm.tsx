@@ -20,7 +20,8 @@ import {
   Check,
   FlaskConical,
   ToggleLeft,
-  ToggleRight
+  ToggleRight,
+  Plus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
@@ -96,6 +97,14 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
   const [newTimeEnd, setNewTimeEnd] = useState(initialData?.time?.split(' - ')[1] || '');
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [rescheduleReason, setRescheduleReason] = useState('');
+
+  // Gerenciamento de lote
+  const batchEvents = isEditing && initialData?.batchId
+    ? allEventsData
+        .filter(e => e.batchId === initialData.batchId)
+        .sort((a, b) => a.date.localeCompare(b.date))
+    : [];
+  const isBatch = batchEvents.length > 1;
 
   const openRescheduleModal = () => {
     setNewRescheduleDate(formData.date);
@@ -420,6 +429,72 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
     } catch (error: any) {
       console.error("Error adding event:", error);
       toast('Erro ao salvar evento: ' + (error.message || 'Erro desconhecido'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddBatchClass = async () => {
+    if (!initialData?.batchId) return;
+    setLoading(true);
+    try {
+      const lastEvent = batchEvents[batchEvents.length - 1];
+      const lastDate = new Date(lastEvent.date + 'T12:00:00');
+      const nextDate = new Date(lastDate);
+      nextDate.setDate(lastDate.getDate() + 7);
+      const dateStr = toLocalDateStr(nextDate);
+      const nextAulaNum = batchEvents.length + 1;
+      const baseTitle = formData.title.replace(/\s*\(Aula \d+\)$/, '');
+
+      const response = await fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          title: `${baseTitle} (Aula ${nextAulaNum})`,
+          date: dateStr,
+          time: `${formData.timeStart} - ${formData.timeEnd}`,
+          status: 'Scheduled',
+          createdBy: initialData.createdBy,
+          teacher: formData.teacher,
+          notificar_admin: 0,
+          updatedAt: new Date().toISOString(),
+          plataforma_meet: formData.plataforma_meet ? 1 : 0,
+          meetLink: formData.meetLink || null,
+          plataforma_comapos: formData.plataforma_comapos ? 1 : 0,
+          convidado_externo: formData.convidado_externo ? 1 : 0,
+          precisa_cabine: formData.precisa_cabine ? 1 : 0,
+          category: formData.category,
+          batchId: initialData.batchId
+        })
+      });
+
+      if (!response.ok) throw new Error('Falha ao criar aula');
+      toast('Aula adicionada ao lote!');
+    } catch (err) {
+      toast('Erro ao adicionar aula');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemoveBatchClass = async (eventId: string) => {
+    if (!confirm('Deseja remover esta aula do lote?')) return;
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/events_delete/${eventId}`, { method: 'POST' });
+      if (!response.ok) throw new Error('Falha ao remover');
+      toast('Aula removida!');
+
+      if (batchEvents.length <= 2) {
+        await fetch(`/api/events_update/${initialData!.id}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ batchId: null, updatedAt: new Date().toISOString() })
+        });
+      }
+    } catch (err) {
+      toast('Erro ao remover aula');
     } finally {
       setLoading(false);
     }
@@ -1210,6 +1285,53 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
               </div>
             </div>
           </div>
+
+          {isEditing && isBatch && (
+            <div className="bg-card-bg p-6 rounded-xl border border-outline-variant shadow-sm border-t-4 border-t-secondary-container transition-colors">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xs font-bold text-secondary-container flex items-center gap-2 uppercase tracking-widest font-headline">
+                  <Package size={16} /> Gerenciar Lote
+                </h3>
+                <span className="px-2 py-0.5 bg-secondary/10 text-secondary text-[10px] font-bold rounded-full border border-secondary/20">
+                  {batchEvents.length} aulas
+                </span>
+              </div>
+
+              <div className="space-y-2 max-h-48 overflow-y-auto mb-3">
+                {batchEvents.map((event, idx) => {
+                  const isCurrent = event.id === initialData?.id;
+                  const isConfirmed = event.status === 'Confirmed';
+                  return (
+                    <div key={event.id} className={`flex items-center justify-between p-2 rounded-lg border transition-all ${isCurrent ? 'border-secondary bg-secondary/5' : 'border-outline-variant/60 bg-surface-container/30'}`}>
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${isConfirmed ? 'bg-green-500' : 'bg-secondary'}`} />
+                        <div>
+                          <p className={`text-[11px] font-bold ${isCurrent ? 'text-secondary' : 'text-text-primary'}`}>
+                            {event.title.includes('(') ? event.title.split('(')[1]?.replace(')', '') : `Aula ${idx + 1}`}
+                            {isCurrent && <span className="text-[9px] ml-1 opacity-60">(atual)</span>}
+                          </p>
+                          <p className="text-[9px] text-text-secondary">
+                            {event.date.split('-').reverse().slice(0, 2).join('/')} • {event.timeStart}-{event.timeEnd}
+                          </p>
+                        </div>
+                      </div>
+                      {!isCurrent && isAdmin && (
+                        <button onClick={() => handleRemoveBatchClass(event.id)} className="p-1.5 text-red-400 hover:text-red-600 rounded-lg transition-all" title="Remover">
+                          <Trash2 size={12} />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {isAdmin && (
+                <button onClick={handleAddBatchClass} disabled={loading} className="w-full h-9 rounded-lg border-2 border-dashed border-secondary/40 text-secondary text-[11px] font-bold hover:bg-secondary/5 transition-all flex items-center justify-center gap-2">
+                  <Plus size={14} /> Adicionar Aula
+                </button>
+              )}
+            </div>
+          )}
 
           <div className="bg-card-bg p-6 rounded-xl border border-outline-variant shadow-sm border-t-4 border-t-secondary-container transition-colors">
              <div className="flex justify-between items-center mb-6">

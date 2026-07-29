@@ -1,7 +1,9 @@
 # Plano: Gerenciar Aulas do Lote no EventForm
 
 ## Objetivo
-Adicionar funcionalidade de adicionar/remover aulas de um lote existente diretamente na tela de edição do EventForm.
+Adicionar funcionalidade de adicionar/remover aulas de um lote existente diretamente na tela de edição do EventFuncionalidade para:
+1. **Aulas em lote**: gerenciar aulas existentes (adicionar/remover)
+2. **Aulas isoladas**: permitir criar um novo lote a partir dela (adicionar mais aulas)
 
 ## Arquivo a modificar
 `src/views/EventForm.tsx`
@@ -20,27 +22,44 @@ const batchEvents = isEditing && initialData?.batchId
       .sort((a, b) => a.date.localeCompare(b.date))
   : [];
 const isBatch = batchEvents.length > 1;
+const isIsolated = isEditing && !initialData?.batchId;
 ```
 
 ## Alteração 2: Adicionar função para adicionar aula ao lote
 
-Adicionar antes do `return` do componente:
+Adicionar após a função `handleSubmit` (linha ~426), antes do `return`:
 
 ```typescript
 const handleAddBatchClass = async () => {
-  if (!initialData?.batchId) return;
+  if (!initialData) return;
   setLoading(true);
   try {
-    const lastEvent = batchEvents[batchEvents.length - 1];
-    const lastDate = new Date(lastDate + 'T12:00:00');
-    const nextDate = new Date(lastDate);
-    nextDate.setDate(lastDate.getDate() + 7);
+    // Determinar batchId: usar existente ou criar novo para aula isolada
+    const currentBatchId = initialData.batchId || `LOTE-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+    const baseTitle = formData.title.replace(/\s*\(Aula \d+\)$/, '');
+    
+    // Calcular próxima data
+    let nextDate: Date;
+    let nextAulaNum: number;
+    
+    if (isBatch && batchEvents.length > 0) {
+      // Já é um lote: adicionar após a última aula
+      const lastEvent = batchEvents[batchEvents.length - 1];
+      nextDate = new Date(lastEvent.date + 'T12:00:00');
+      nextDate.setDate(nextDate.getDate() + 7);
+      nextAulaNum = batchEvents.length + 1;
+    } else {
+      // Aula isolada: adicionar 7 dias após a data atual
+      nextDate = new Date(formData.date + 'T12:00:00');
+      nextDate.setDate(nextDate.getDate() + 7);
+      nextAulaNum = 2; // Esta será a segunda aula
+    }
+    
     const dateStr = toLocalDateStr(nextDate);
-    const nextAulaNum = batchEvents.length + 1;
 
     const payload = {
       ...formData,
-      title: `${formData.title.replace(/\s*\(Aula \d+\)$/, '')} (Aula ${nextAulaNum})`,
+      title: `${baseTitle} (Aula ${nextAulaNum})`,
       date: dateStr,
       time: `${formData.timeStart} - ${formData.timeEnd}`,
       status: 'Scheduled',
@@ -54,7 +73,7 @@ const handleAddBatchClass = async () => {
       convidado_externo: formData.convidado_externo ? 1 : 0,
       precisa_cabine: formData.precisa_cabine ? 1 : 0,
       category: formData.category,
-      batchId: initialData.batchId
+      batchId: currentBatchId
     };
 
     const response = await fetch('/api/events', {
@@ -64,6 +83,24 @@ const handleAddBatchClass = async () => {
     });
 
     if (!response.ok) throw new Error('Falha ao criar aula');
+
+    // Se era aula isolada, atualizar a aula atual para ter o batchId
+    if (!initialData.batchId) {
+      await fetch(`/api/events_update/${initialData.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ batchId: currentBatchId, updatedAt: new Date().toISOString() })
+      });
+      // Atualizar título da aula atual para "(Aula 1)"
+      await fetch(`/api/events_update/${initialData.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          title: `${baseTitle} (Aula 1)`,
+          updatedAt: new Date().toISOString() 
+        })
+      });
+    }
 
     toast('Nova aula adicionada ao lote!');
   } catch (err) {
@@ -76,6 +113,8 @@ const handleAddBatchClass = async () => {
 ```
 
 ## Alteração 3: Adicionar função para remover aula do lote
+
+Após `handleAddBatchClass`:
 
 ```typescript
 const handleRemoveBatchClass = async (eventId: string) => {
@@ -111,7 +150,7 @@ const handleRemoveBatchClass = async (eventId: string) => {
 
 ## Alteração 4: Adicionar seção visual "Gerenciar Lote" no form
 
-Na coluna da direita (col-span-4), entre a seção de Logística e Detalhes Adicionais, adicionar:
+Na coluna da direita (col-span-4), após a seção "Horário" (linha ~1212) e antes de "Logística" (linha ~1214), adicionar:
 
 ```tsx
 {isEditing && isBatch && (
@@ -195,10 +234,11 @@ Na coluna da direita (col-span-4), entre a seção de Logística e Detalhes Adic
 
 | # | O que | Onde |
 |---|-------|------|
+| 0 | Adicionar `Plus` no import lucide-react | Linha 2 (imports) |
 | 1 | Estado `batchEvents` e `isBatch` | Após linha 98 (estado do componente) |
-| 2 | Função `handleAddBatchClass` | Antes do `return` do componente |
-| 3 | Função `handleRemoveBatchClass` | Antes do `return` do componente |
-| 4 | Seção visual "Gerenciar Lote" | Coluna direita (col-span-4), entre Logística e Detalhes Adicionais |
+| 2 | Função `handleAddBatchClass` | Após linha 426 (após handleSubmit) |
+| 3 | Função `handleRemoveBatchClass` | Após handleAddBatchClass |
+| 4 | Seção visual "Gerenciar Lote" | Coluna direita, entre Horário e Logística |
 
 ## Não altera
 - API backend (usa rotas existentes)
