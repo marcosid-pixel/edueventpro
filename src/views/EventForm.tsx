@@ -88,6 +88,8 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
   const isEditing = !!initialData;
   const isAdmin = effectiveRole === 'ADMIN' || effectiveRole === 'COORDENADOR';
   const isProfessor = effectiveRole === 'PROFESSOR';
+  const [localBatchId, setLocalBatchId] = useState<string | null>(null);
+  const effectiveBatchId = localBatchId || initialData?.batchId || null;
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [rescheduleDate, setRescheduleDate] = useState('');
   const [cancelReason, setCancelReason] = useState('');
@@ -99,9 +101,9 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
   const [rescheduleReason, setRescheduleReason] = useState('');
 
   // Gerenciamento de lote
-  const batchEvents = isEditing && initialData?.batchId
+  const batchEvents = isEditing && effectiveBatchId
     ? allEventsData
-        .filter(e => e.batchId === initialData.batchId)
+        .filter(e => e.batchId === effectiveBatchId)
         .sort((a, b) => a.date.localeCompare(b.date))
     : [];
   const isBatch = batchEvents.length > 1;
@@ -257,7 +259,7 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
           convidado_externo: formData.convidado_externo ? 1 : 0,
           precisa_cabine: formData.precisa_cabine ? 1 : 0,
           category: formData.category,
-          batchId: bId || initialData?.batchId || null
+          batchId: bId || effectiveBatchId || null
         };
         
         // Ensure ONLY columns that exist in DB are sent
@@ -439,7 +441,7 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
     setLoading(true);
     try {
       const baseTitle = formData.title.replace(/\s*\(Aula \d+\)$/, '');
-      let batchId = initialData.batchId;
+      let batchId = effectiveBatchId;
       let nextAulaNum: number;
       let nextDate: Date;
 
@@ -459,6 +461,8 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ title: `${baseTitle} (Aula 1)`, batchId, updatedAt: new Date().toISOString() })
         });
+        setLocalBatchId(batchId);
+        setFormData(prev => ({ ...prev, title: `${baseTitle} (Aula 1)` }));
       }
 
       const dateStr = toLocalDateStr(nextDate);
@@ -477,7 +481,7 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
         body: JSON.stringify(cleanPayload)
       });
       if (!response.ok) throw new Error('Falha');
-      toast(!initialData.batchId ? 'Lote criado! Aula adicionada.' : 'Aula adicionada ao lote!');
+      toast(!effectiveBatchId ? 'Lote criado! Aula adicionada.' : 'Aula adicionada ao lote!');
     } catch (err) { console.error(err); toast('Erro ao adicionar aula'); } finally { setLoading(false); }
   };
 
