@@ -10,7 +10,7 @@ import { parseJsonArray, getCourseStyle, toLocalDateStr } from '../utils/index';
 
 const UnifiedCalendar = ({ onEdit, onDelete }: { onEdit: (e: AcademicEvent) => void, onDelete: (id: string) => void }) => {
   const { user, effectiveRole } = useAuth();
-  const isAdmin = effectiveRole === 'ADMIN';
+  const isAdmin = effectiveRole === 'ADMIN' || effectiveRole === 'COORDENADOR';
   const { data: events } = useRealtimeCollection<AcademicEvent>('events');
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().substring(0, 7));
   const [typeFilter, setTypeFilter] = useState('Todos');

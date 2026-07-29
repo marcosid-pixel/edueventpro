@@ -35,7 +35,7 @@ const ReportsView = () => {
   const [dateFilter, setDateFilter] = useState('Todos'); 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'docentes' | 'historico'>('dashboard');
 
-  const teachers = users.filter(u => u.role === 'PROFESSOR' || u.role === 'ADMIN');
+  const teachers = users.filter(u => u.role === 'PROFESSOR' || u.role === 'ADMIN' || u.role === 'COORDENADOR');
   const logs = [...activityLogs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const filteredLogs = logs.filter(log => {
@@ -629,7 +629,7 @@ const ReportsView = () => {
                                 className="w-10 h-10 rounded-xl object-cover border border-outline-variant group-hover:border-secondary/40 transition-colors"
                                 alt={t.displayName}
                               />
-                              <div className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-card-bg flex items-center justify-center ${t.role === 'ADMIN' ? 'bg-orange-500' : 'bg-secondary'}`}>
+                              <div className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-card-bg flex items-center justify-center ${t.role === 'ADMIN' ? 'bg-orange-500' : t.role === 'COORDENADOR' ? 'bg-purple-500' : 'bg-secondary'}`}>
                                 {t.role === 'ADMIN' ? <Settings size={8} className="text-white" /> : <UserIcon size={8} className="text-white" />}
                               </div>
                             </div>

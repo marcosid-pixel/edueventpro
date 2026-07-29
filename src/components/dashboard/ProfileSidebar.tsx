@@ -1,5 +1,5 @@
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { Edit2, FlaskConical, Clock, BookOpen, Briefcase, Award } from 'lucide-react';
+import { Edit2, FlaskConical, Clock, BookOpen, Briefcase, Award, Users, Calendar } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { calculateTotalHours, getEventConfirmationState, parseJsonArray } from '../../utils';
 import type { AcademicEvent, User, Course, View } from '../../types';
@@ -32,8 +32,17 @@ const ProfileSidebar = ({ user, effectiveRole, filteredEvents, allEvents, course
   const uniqueCourses = [...new Set(filteredEvents.map(e => e.course))].filter(Boolean);
 
   const now = new Date();
-  const workStart = '09:00';
-  const workEnd = '18:00';
+  const workStart = user?.workStart || '09:00';
+  const workEnd = user?.workEnd || '18:00';
+
+  // Métricas admin
+  const totalProfessors = allEvents.length > 0
+    ? [...new Set(allEvents.map(e => e.teacher).filter(Boolean))].length
+    : 0;
+  const today = now.toISOString().split('T')[0];
+  const aulasHoje = allEvents.filter(e => e.date === today).length;
+  const pendingEvents = allEvents.filter(e => getEventConfirmationState(e) === 'PENDING_CONFIRMATION').length;
+  const cancelledEvents = allEvents.filter(e => e.status === 'Cancelled').length;
 
   const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
@@ -103,25 +112,45 @@ const ProfileSidebar = ({ user, effectiveRole, filteredEvents, allEvents, course
         </div>
 
         <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-slate-100 dark:border-slate-700/50">
-          <div className="text-center p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50">
-            <BookOpen size={14} className="mx-auto mb-1 text-indigo-500" />
-            <p className="text-lg font-black text-slate-800 dark:text-white leading-none">{totalEvents}</p>
-            <p className="text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-1">
-              {isAdmin ? 'Total' : 'Aulas'}
-            </p>
-          </div>
-          <div className="text-center p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50">
-            <Briefcase size={14} className="mx-auto mb-1 text-amber-500" />
-            <p className="text-lg font-black text-slate-800 dark:text-white leading-none">
-              {Number.isInteger(teachingHours) ? teachingHours : teachingHours.toFixed(1)}
-            </p>
-            <p className="text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-1">Horas</p>
-          </div>
-          <div className="text-center p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50">
-            <Award size={14} className="mx-auto mb-1 text-purple-500" />
-            <p className="text-lg font-black text-slate-800 dark:text-white leading-none">{uniqueCourses.length || userCourseIds.length}</p>
-            <p className="text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-1">Cursos</p>
-          </div>
+          {isAdmin ? (
+            <>
+              <div className="text-center p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                <Users size={14} className="mx-auto mb-1 text-indigo-500" />
+                <p className="text-lg font-black text-slate-800 dark:text-white leading-none">{totalProfessors}</p>
+                <p className="text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-1">Professores</p>
+              </div>
+              <div className="text-center p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                <Calendar size={14} className="mx-auto mb-1 text-amber-500" />
+                <p className="text-lg font-black text-slate-800 dark:text-white leading-none">{aulasHoje}</p>
+                <p className="text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-1">Hoje</p>
+              </div>
+              <div className="text-center p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                <Award size={14} className="mx-auto mb-1 text-purple-500" />
+                <p className="text-lg font-black text-slate-800 dark:text-white leading-none">{pendingEvents}</p>
+                <p className="text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-1">Pendentes</p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="text-center p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                <BookOpen size={14} className="mx-auto mb-1 text-indigo-500" />
+                <p className="text-lg font-black text-slate-800 dark:text-white leading-none">{totalEvents}</p>
+                <p className="text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-1">Aulas</p>
+              </div>
+              <div className="text-center p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                <Briefcase size={14} className="mx-auto mb-1 text-amber-500" />
+                <p className="text-lg font-black text-slate-800 dark:text-white leading-none">
+                  {Number.isInteger(teachingHours) ? teachingHours : teachingHours.toFixed(1)}
+                </p>
+                <p className="text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-1">Horas</p>
+              </div>
+              <div className="text-center p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                <Award size={14} className="mx-auto mb-1 text-purple-500" />
+                <p className="text-lg font-black text-slate-800 dark:text-white leading-none">{uniqueCourses.length || userCourseIds.length}</p>
+                <p className="text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-1">Cursos</p>
+              </div>
+            </>
+          )}
         </div>
       </div>
 

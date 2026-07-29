@@ -15,7 +15,7 @@ const PERIODS = [
 
 export default function ScheduleHub({ onEdit, onNewEvent, onDelete }: { onEdit: (e: AcademicEvent) => void, onNewEvent: () => void, onDelete?: (id: string) => void }) {
   const { user, effectiveRole } = useAuth();
-  const isAdmin = effectiveRole === 'ADMIN';
+  const isAdmin = effectiveRole === 'ADMIN' || effectiveRole === 'COORDENADOR';
   const { data: events } = useRealtimeCollection<AcademicEvent>('events');
   const { data: courses } = useRealtimeCollection<Course>('courses');
   const { data: users } = useRealtimeCollection<User>('users');

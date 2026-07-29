@@ -23,7 +23,7 @@ import type { View, AcademicEvent, User, Course, ActivityLog } from '../types';
 
 const UserManagementView = () => {
   const { effectiveRole } = useAuth();
-  const isAdmin = effectiveRole === 'ADMIN';
+  const isAdmin = effectiveRole === 'ADMIN' || effectiveRole === 'COORDENADOR';
   const { data: users } = useRealtimeCollection<User>('users');
   const { data: courses } = useRealtimeCollection<Course>('courses');
   const { data: events, refresh: refreshEvents } = useRealtimeCollection<AcademicEvent>('events');
@@ -96,6 +96,47 @@ const UserManagementView = () => {
         </div>
       </div>
 
+      {/* Árvore de Responsabilidade — só para ADMIN */}
+      {isAdmin && users.filter(u => u.role === 'COORDENADOR').length > 0 && (
+        <div className="bg-card-bg rounded-3xl border border-outline-variant p-6 shadow-sm">
+          <h3 className="text-xs font-black text-text-primary mb-4 uppercase tracking-widest flex items-center gap-2">
+            <svg className="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Árvore de Responsabilidade
+          </h3>
+          <div className="space-y-3">
+            {users.filter(u => u.role === 'COORDENADOR').map(coord => {
+              const vinculados = users.filter(u => u.createdBy === coord.id);
+              return (
+                <div key={coord.id} className="pl-2">
+                  <p className="text-xs font-bold text-text-primary flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-purple-500 shrink-0"></span>
+                    {coord.displayName}
+                    <span className="text-[10px] font-medium text-text-secondary bg-surface-container px-1.5 py-0.5 rounded">
+                      {vinculados.length} professor{vinculados.length !== 1 ? 'es' : ''}
+                    </span>
+                  </p>
+                  {vinculados.length === 0 ? (
+                    <p className="text-[11px] text-text-secondary italic ml-4 mt-0.5">
+                      Nenhum professor vinculado
+                    </p>
+                  ) : (
+                    <ul className="ml-4 mt-1 space-y-0.5">
+                      {vinculados.map(p => (
+                        <li key={p.id} className="text-[11px] text-text-secondary flex items-center gap-1.5">
+                          <span className="text-text-tertiary">→</span> {p.displayName}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-4">
         {users.map(u => {
           const userEvents = events.filter(e => e.teacher === u.displayName || e.createdBy === u.id);
@@ -134,15 +175,17 @@ const UserManagementView = () => {
                       className="w-16 h-16 rounded-2xl object-cover border-2 border-outline-variant group-hover:border-secondary transition-colors" 
                       alt={u.displayName} 
                     />
-                    <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-card-bg flex items-center justify-center ${u.role === 'ADMIN' ? 'bg-orange-500' : 'bg-blue-500'}`}>
+                    <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-card-bg flex items-center justify-center ${u.role === 'ADMIN' ? 'bg-orange-500' : u.role === 'COORDENADOR' ? 'bg-purple-500' : 'bg-blue-500'}`}>
                        {u.role === 'ADMIN' ? <Settings size={10} className="text-white" /> : <UserIcon size={10} className="text-white" />}
                     </div>
                   </div>
                   <div>
                     <h3 className="text-lg font-black text-text-primary group-hover:text-secondary transition-colors">{u.displayName}</h3>
                     <div className="flex items-center gap-3 mt-1">
-                      <span className="text-[10px] font-black text-text-secondary uppercase bg-surface-container px-2 py-0.5 rounded border border-outline-variant">
-                        {u.role}
+                      <span className={`text-[10px] font-black uppercase bg-surface-container px-2 py-0.5 rounded border border-outline-variant ${
+                        u.role === 'ADMIN' ? 'text-orange-600' : u.role === 'COORDENADOR' ? 'text-purple-600' : 'text-text-secondary'
+                      }`}>
+                        {u.role === 'ADMIN' ? 'Administrador' : u.role === 'COORDENADOR' ? 'Coordenador(a)' : 'Professor(a)'}
                       </span>
                       <span className="text-xs text-text-secondary font-medium italic">{u.email}</span>
                     </div>
@@ -187,6 +230,29 @@ const UserManagementView = () => {
                              <Settings size={14} /> Definições de Acesso
                           </h4>
                           <div className="space-y-4">
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] font-bold text-text-secondary uppercase ml-1">Cargo / Função</label>
+                              <div className="flex items-center gap-2">
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                                  u.role === 'ADMIN' ? 'bg-orange-500/10' : u.role === 'COORDENADOR' ? 'bg-purple-500/10' : 'bg-blue-500/10'
+                                }`}>
+                                  {u.role === 'ADMIN' ? <Settings size={14} className="text-orange-500" /> : u.role === 'COORDENADOR' ? <UserIcon size={14} className="text-purple-500" /> : <UserIcon size={14} className="text-blue-500" />}
+                                </div>
+                                <select
+                                  value={u.role || 'PROFESSOR'}
+                                  onClick={(e) => e.stopPropagation()}
+                                  onChange={(e) => {
+                                    handleUpdateUserField(u.id, 'role', e.target.value);
+                                    toast.success(`Cargo alterado para ${e.target.value}`);
+                                  }}
+                                  className="flex-1 bg-card-bg border border-outline-variant rounded-xl px-3 py-2 text-xs font-bold text-text-primary outline-none focus:ring-2 focus:ring-secondary"
+                                >
+                                  <option value="PROFESSOR">Professor(a)</option>
+                                  <option value="COORDENADOR">Coordenador(a)</option>
+                                  <option value="ADMIN">Administrador</option>
+                                </select>
+                              </div>
+                            </div>
                             <div className="space-y-1.5">
                               <label className="text-[10px] font-bold text-text-secondary uppercase ml-1">Departamentos Designados</label>
                               <div className="flex flex-wrap gap-1.5 p-2 bg-card-bg border border-outline-variant rounded-xl min-h-[44px]">

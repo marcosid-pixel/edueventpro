@@ -47,6 +47,7 @@ const ActionBadge = ({ action }: { action: string }) => {
 
 const RoleBadge = ({ role }: { role?: string }) => {
   if (role === 'ADMIN') return <span className="text-[8px] font-black px-1.5 py-0.5 rounded-md bg-orange-500/10 text-orange-600 border border-orange-500/20 uppercase tracking-wider">Admin</span>;
+  if (role === 'COORDENADOR') return <span className="text-[8px] font-black px-1.5 py-0.5 rounded-md bg-purple-500/10 text-purple-600 border border-purple-500/20 uppercase tracking-wider">Coordenador</span>;
   return <span className="text-[8px] font-black px-1.5 py-0.5 rounded-md bg-secondary/10 text-secondary border border-secondary/20 uppercase tracking-wider">Professor</span>;
 };
 
@@ -76,7 +77,7 @@ const LogsView = () => {
   const [expandedCourse, setExpandedCourse] = useState<string | null>(null);
   const ITEMS_PER_PAGE = 50;
 
-  const teachers = users.filter(u => u.role === 'PROFESSOR' || u.role === 'ADMIN');
+  const teachers = users.filter(u => u.role === 'PROFESSOR' || u.role === 'ADMIN' || u.role === 'COORDENADOR');
   const courseList = courses;
   const sortedLogs = [...logs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
@@ -224,7 +225,7 @@ const LogsView = () => {
             >
               <option value="Todos">Todos os Professores</option>
               {teachers.map(t => (
-                <option key={t.id} value={t.id}>{t.displayName} ({t.role === 'ADMIN' ? 'Admin' : 'Professor'})</option>
+                <option key={t.id} value={t.id}>{t.displayName} ({t.role === 'ADMIN' ? 'Admin' : t.role === 'COORDENADOR' ? 'Coordenador' : 'Professor'})</option>
               ))}
             </select>
           </div>

@@ -8,9 +8,10 @@ export interface User {
   role?: string;
   workStart?: string;
   workEnd?: string;
+  createdBy?: string;
 }
 
-type SimulatedRole = 'ADMIN' | 'PROFESSOR' | null;
+type SimulatedRole = 'ADMIN' | 'PROFESSOR' | 'COORDENADOR' | null;
 
 interface AuthContextType {
   user: User | null;
@@ -22,6 +23,8 @@ interface AuthContextType {
   simulatedRole: SimulatedRole;
   setSimulatedRole: (role: SimulatedRole) => void;
   effectiveRole: string | undefined;
+  isCoordinator: boolean;
+  isAdminOrCoordinator: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -38,6 +41,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return user?.role;
   }, [user?.role, simulatedRole, isAdmin]);
 
+  const isCoordinator = effectiveRole === 'COORDENADOR';
+  const isAdminOrCoordinator = effectiveRole === 'ADMIN' || effectiveRole === 'COORDENADOR';
+
   const setSimulatedRole = useCallback((role: SimulatedRole) => {
     localStorage.setItem('simulatedRole', role || '');
     setSimulatedRoleState(role);
@@ -45,14 +51,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchUser = async () => {
     try {
-      const response = await fetch('/api/auth/me');
+      const response = await fetch('/api/auth/me', { credentials: 'same-origin' });
       if (response.ok) {
         const text = await response.text();
         try {
           const data = JSON.parse(text);
           setUser(data.user);
           const saved = localStorage.getItem('simulatedRole');
-          if (saved && data.user?.role === 'ADMIN') {
+          if (saved && (data.user?.role === 'ADMIN' || data.user?.role === 'COORDENADOR')) {
             setSimulatedRoleState(saved as SimulatedRole);
           } else {
             localStorage.removeItem('simulatedRole');
@@ -83,7 +89,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const response = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(credentials)
+      body: JSON.stringify(credentials),
+      credentials: 'same-origin'
     });
     const text = await response.text();
     let data: any;
@@ -100,7 +107,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const response = await fetch('/api/auth/signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData)
+      body: JSON.stringify(formData),
+      credentials: 'same-origin'
     });
     const text = await response.text();
     let data: any;
@@ -115,7 +123,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
       setUser(null);
       setSimulatedRoleState(null);
       localStorage.removeItem('simulatedRole');
@@ -129,7 +137,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout, updateUser, simulatedRole, setSimulatedRole, effectiveRole }}>
+    <AuthContext.Provider value={{ user, loading, login, signup, logout, updateUser, simulatedRole, setSimulatedRole, effectiveRole, isCoordinator, isAdminOrCoordinator }}>
       {!loading && children}
     </AuthContext.Provider>
   );

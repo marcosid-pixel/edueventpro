@@ -36,7 +36,7 @@ const Dashboard = ({ setView, onNewEvent, onEdit, onDelete }: { setView: (v: Vie
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
 
-  const isAdmin = effectiveRole === 'ADMIN';
+  const isAdmin = effectiveRole === 'ADMIN' || effectiveRole === 'COORDENADOR';
 
   const activeNotifications = [...notifications.filter((n) => {
     const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
@@ -342,6 +342,14 @@ const Dashboard = ({ setView, onNewEvent, onEdit, onDelete }: { setView: (v: Vie
                             <div>
                               <p className="text-xs font-bold text-slate-800 dark:text-white">{event.teacher || 'Não Atribuído'}</p>
                               <p className="text-[9px] text-slate-500 dark:text-slate-400 uppercase font-semibold tracking-tight">Professor(a)</p>
+                              {professor?.createdBy && (() => {
+                                const coord = users.find(u => u.id === professor.createdBy);
+                                return coord ? (
+                                  <span className="text-[7px] font-bold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded mt-0.5 inline-block">
+                                    Resp: {coord.displayName}
+                                  </span>
+                                ) : null;
+                              })()}
                             </div>
                           </div>
                         </td>

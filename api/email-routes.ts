@@ -106,7 +106,7 @@ router.post("/send-confirmation/:eventId", requireAuth, async (req, res) => {
     });
 
     if (!sent) {
-      return res.status(500).json({ error: "Falha ao enviar e-mail. Verifique a configuração RESEND_API_KEY." });
+      return res.status(500).json({ error: "Falha ao enviar e-mail. Verifique a configuração SMTP_EMAIL." });
     }
 
     // Criar notificação no sistema

@@ -57,7 +57,7 @@ export interface AcademicEvent {
   cancelReason?: string;
 }
 
-export type UserRole = 'ADMIN' | 'PROFESSOR';
+export type UserRole = 'ADMIN' | 'PROFESSOR' | 'COORDENADOR';
 
 export interface User {
   id: string;
@@ -69,6 +69,7 @@ export interface User {
   category?: string;
   workStart?: string;
   workEnd?: string;
+  createdBy?: string;
 }
 
 export interface Notification {

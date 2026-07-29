@@ -21,7 +21,7 @@ export function useRealtimeCollection<T>(collectionPath: string, _constraints: a
         return;
       }
 
-      const fetchPromise = fetch(`/api/${collectionPath}`).then(res => {
+      const fetchPromise = fetch(`/api/${collectionPath}`, { credentials: 'same-origin' }).then(res => {
         if (!res.ok) throw new Error(`Error: ${res.statusText}`);
         return res.json();
       });

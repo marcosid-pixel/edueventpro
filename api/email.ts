@@ -12,9 +12,10 @@ interface SendEmailParams {
   to: string;
   subject: string;
   html: string;
+  text?: string;
 }
 
-export async function sendEmail({ to, subject, html }: SendEmailParams): Promise<boolean> {
+export async function sendEmail({ to, subject, html, text }: SendEmailParams): Promise<boolean> {
   try {
     if (!process.env.SMTP_EMAIL || !process.env.SMTP_PASSWORD) {
       console.warn('SMTP não configurado. E-mail não enviado.');
@@ -26,6 +27,13 @@ export async function sendEmail({ to, subject, html }: SendEmailParams): Promise
       to,
       subject,
       html,
+      text: text || html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim().substring(0, 500),
+      headers: {
+        'Reply-To': process.env.SMTP_EMAIL,
+        'List-Unsubscribe': `<mailto:${process.env.SMTP_EMAIL}?subject=Cancelar%20inscricao>`,
+        'Precedence': 'bulk',
+        'X-Mailer': 'EduEvent-Pro/1.0'
+      }
     });
 
     console.log(`E-mail enviado para ${to}: ${subject}`);
@@ -79,7 +87,7 @@ export function confirmationRequestEmail(
   });
 
   const content = `
-    <h2 style="margin: 0 0 16px; font-size: 20px; color: #1e293b;">Olá, ${userName}!</h2>
+    <h2 style="margin: 0 0 16px; font-size: 20px; color: #1e293b;">Olá, ${userName}</h2>
     <p style="color: #475569; line-height: 1.6;">
       Você tem uma aula pendente de confirmação. Por favor, confirme sua presença clicando no botão abaixo.
     </p>

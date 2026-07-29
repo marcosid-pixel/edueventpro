@@ -9,7 +9,7 @@ const SpeakerView = () => {
   const { data: speakers } = useRealtimeCollection<Speaker>('speakers');
   const { data: events } = useRealtimeCollection<AcademicEvent>('events');
 
-  const isAdmin = effectiveRole === 'ADMIN';
+  const isAdmin = effectiveRole === 'ADMIN' || effectiveRole === 'COORDENADOR';
 
   const mySpeakers = isAdmin ? speakers : speakers.filter(s => s.createdBy === user?.id);
 

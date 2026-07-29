@@ -246,7 +246,7 @@ const SettingsView = () => {
         )}
       </div>
 
-      {user?.role === 'ADMIN' && (
+      {(user?.role === 'ADMIN' || user?.role === 'COORDENADOR') && (
         <div className="bg-card-bg p-8 rounded-xl border border-outline-variant shadow-sm transition-colors">
           <div className="flex items-center gap-3 mb-6 border-b border-outline-variant pb-4">
             <div className="p-2 bg-text-primary/5 rounded-lg">

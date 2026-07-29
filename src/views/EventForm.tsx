@@ -15,6 +15,7 @@ import {
   GraduationCap,
   Users,
   UserPlus,
+  Search,
   Info as InfoIcon,
   Check,
   FlaskConical,
@@ -30,7 +31,7 @@ import { EVENT_CATEGORIES, ACADEMIC_COURSES } from '../constants';
 import { parseCategories, isTestMode, apiPost, parseJsonArray, getEventConfirmationState, toLocalDateStr } from '../utils/index';
 
 const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initialData?: AcademicEvent | null }) => {
-  const { user, effectiveRole } = useAuth();
+  const { user, effectiveRole, isAdminOrCoordinator } = useAuth();
   const { data: courses } = useRealtimeCollection<Course>('courses');
   const { data: users } = useRealtimeCollection<User>('users');
   const { data: allEventsData } = useRealtimeCollection<AcademicEvent>('events');
@@ -58,6 +59,8 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
   const [showLogistics, setShowLogistics] = useState(initialData?.plataforma_meet || initialData?.plataforma_comapos || false);
   const [showAdvanced, setShowAdvanced] = useState(initialData?.convidado_externo || initialData?.precisa_cabine || false);
   const [allowNoTeacher, setAllowNoTeacher] = useState(false);
+  const [teacherSearch, setTeacherSearch] = useState(initialData?.teacher || '');
+  const [showTeacherSuggestions, setShowTeacherSuggestions] = useState(false);
   
   const [formData, setFormData] = useState({
     title: initialData?.title || '',
@@ -82,7 +85,7 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
   });
 
   const isEditing = !!initialData;
-  const isAdmin = effectiveRole === 'ADMIN';
+  const isAdmin = effectiveRole === 'ADMIN' || effectiveRole === 'COORDENADOR';
   const isProfessor = effectiveRole === 'PROFESSOR';
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [rescheduleDate, setRescheduleDate] = useState('');
@@ -166,6 +169,16 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
       toast('Aula reagendada com sucesso!');
       setShowRescheduleModal(false);
       setRescheduleReason('');
+
+      // Enviar e-mail de notificação ao professor (após reagendamento)
+      if (!isTestMode() && initialData?.id) {
+        fetch('/api/emails/event-created', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ eventId: initialData.id })
+        }).catch(() => {});
+      }
+
       setView('courses');
     } catch (err) {
       console.error(err);
@@ -178,16 +191,45 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
   const handleSubmit = async () => {
     if (!formData.title || !formData.date) return toast('Título e data são obrigatórios');
     
-    // Regra: Descrição min 20 caracteres para admin ou modo teste, 150 para professor na criação
-    const minDesc = (isAdmin || allowNoTeacher) ? 20 : 150;
-    if (!isEditing && formData.description.length < minDesc) {
-      toast(`A descrição deve ter no mínimo ${minDesc} caracteres. Atual: ${formData.description.length}. Por favor, detalhe mais os objetivos acadêmicos.`);
-      return;
-    }
+    // Descrição agora é opcional — sem mínimo de caracteres
 
     setLoading(true);
     try {
       const isCreate = !isEditing;
+
+      // Auto-criar professor quando "Cadastro Manual" está ativo e o nome não existe no sistema
+      if (allowNoTeacher && formData.teacher && formData.teacher.trim()) {
+        const existingUsers = await fetch('/api/users', { credentials: 'same-origin' }).then(r => r.json());
+        const existingUser = existingUsers.find(
+          (u: any) => u.displayName?.toLowerCase() === formData.teacher.trim().toLowerCase()
+        );
+        if (!existingUser) {
+          const newUserId = `user_ext_${Date.now()}`;
+          await fetch('/api/users', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: newUserId,
+              displayName: formData.teacher.trim(),
+              email: '',
+              role: 'PROFESSOR',
+              createdBy: user?.id
+            })
+          });
+          if (!isTestMode()) await fetch('/api/notifications', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: 'Professor Cadastrado',
+              message: `O professor "${formData.teacher.trim()}" foi vinculado a você como responsável.`,
+              type: 'success',
+              userId: user?.id,
+              updatedAt: new Date().toISOString(),
+              createdAt: new Date().toISOString()
+            })
+          });
+        }
+      }
       
       const createEvent = async (date: string, suffix: string = '', bId?: string) => {
         const payload = {
@@ -269,7 +311,18 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
           })
         });
       } else {
-        await createEvent(formData.date);
+        const createdEvent = await createEvent(formData.date);
+        
+        // Enviar e-mail de notificação ao professor (após criação)
+        if (isCreate && formData.teacher && createdEvent?.id) {
+          if (!isTestMode()) {
+            fetch('/api/emails/event-created', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ eventId: createdEvent.id })
+            }).catch(() => {});
+          }
+        }
         
         // Log de criação normal (se for admin criando)
         if (isCreate) {
@@ -671,6 +724,15 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
                           })
                         });
 
+                        // Enviar e-mail de cancelamento ao professor
+                        if (!isTestMode() && initialData?.id) {
+                          fetch('/api/emails/event-cancelled', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ eventId: initialData.id, reason: cancelReason })
+                          }).catch(() => {});
+                        }
+
                         toast('Aula cancelada com sucesso!');
                         setShowCancelModal(false);
                         setCancelReason('');
@@ -928,94 +990,130 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
                 <div className="space-y-1.5 text-text-secondary">
                   <div className="flex items-center justify-between ml-1 mb-1">
                     <label className="text-[11px] font-bold uppercase tracking-wider">Professor Responsável</label>
-                    {user?.role === 'ADMIN' && (
+                    {isAdminOrCoordinator && (
                       <button
                         type="button"
                         onClick={() => {
                           setAllowNoTeacher(!allowNoTeacher);
                           if (!allowNoTeacher) {
                             setFormData({...formData, teacher: ''});
+                            setTeacherSearch('');
+                          } else {
+                            setTeacherSearch(formData.teacher);
                           }
                         }}
-                        className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-all"
-                        title="Criar eventos sem professor cadastrado (modo teste)"
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all"
+                        title="Inserir professor externo (não cadastrado)"
                       >
                         {allowNoTeacher ? (
-                          <ToggleRight size={14} className="text-purple-500" />
+                          <ToggleRight size={14} className="text-emerald-500" />
                         ) : (
                           <ToggleLeft size={14} className="text-slate-400" />
                         )}
-                        <FlaskConical size={10} className="text-purple-500" />
-                        <span className="text-[8px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">Modo Teste</span>
+                        <UserPlus size={10} className="text-emerald-500" />
+                        <span className="text-[8px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Cadastro Manual</span>
                       </button>
                     )}
                   </div>
                   
-                  {allowNoTeacher ? (
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={formData.teacher}
-                        onChange={(e) => setFormData({...formData, teacher: e.target.value})}
-                        placeholder="Digite o nome do professor (fictício)..."
-                        className="w-full h-11 border-2 border-purple-300 dark:border-purple-700 rounded-lg bg-purple-50/50 dark:bg-purple-950/20 px-3 text-sm focus:ring-2 focus:ring-purple-400 outline-none text-text-primary pr-10"
-                      />
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-purple-400">
-                        <FlaskConical size={14} />
-                      </div>
-                      <p className="text-[8px] text-purple-500 dark:text-purple-400 font-bold mt-1 ml-1 uppercase tracking-wider">
-                        Modo teste ativo — professor não precisa estar cadastrado
-                      </p>
+                  <div className="relative" onClick={() => !allowNoTeacher && formData.course && setShowTeacherSuggestions(true)}>
+                    <input
+                      type="text"
+                      value={allowNoTeacher ? formData.teacher : teacherSearch}
+                      disabled={!formData.course && !allowNoTeacher}
+                      onChange={(e) => {
+                        if (allowNoTeacher) {
+                          setFormData({...formData, teacher: e.target.value});
+                        } else {
+                          setTeacherSearch(e.target.value);
+                          setShowTeacherSuggestions(true);
+                          if (e.target.value === '') {
+                            setFormData({...formData, teacher: ''});
+                          }
+                        }
+                      }}
+                      onFocus={() => !allowNoTeacher && formData.course && setShowTeacherSuggestions(true)}
+                      onBlur={() => setTimeout(() => setShowTeacherSuggestions(false), 200)}
+                      placeholder={allowNoTeacher ? "Digite o nome do professor externo..." : "Digite o nome ou inicial do professor..."}
+                      className={`w-full h-11 rounded-lg px-3 text-sm focus:ring-2 outline-none text-text-primary pr-10 ${
+                        allowNoTeacher
+                          ? 'border-2 border-emerald-300 dark:border-emerald-700 bg-emerald-50/50 dark:bg-emerald-950/20 focus:ring-emerald-400'
+                          : 'border border-outline-variant bg-surface-container focus:ring-secondary-container'
+                      }`}
+                    />
+                    <div className={`absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none ${allowNoTeacher ? 'text-emerald-400' : 'text-text-secondary'}`}>
+                      {allowNoTeacher ? <UserPlus size={14} /> : <Search size={14} />}
                     </div>
-                  ) : (
-                    <div className="relative group">
-                      <select 
-                        value={formData.teacher}
-                        disabled={!formData.course}
-                        onChange={(e) => setFormData({...formData, teacher: e.target.value})}
-                        className="w-full h-11 border border-outline-variant rounded-lg bg-surface-container px-3 text-sm focus:ring-2 focus:ring-secondary-container outline-none text-text-primary appearance-none pr-10"
-                      >
-                        <option value="">Selecione um professor...</option>
+                    {allowNoTeacher && (
+                      <p className="text-[8px] text-emerald-500 dark:text-emerald-400 font-bold mt-1 ml-1 uppercase tracking-wider">
+                        Professor externo — não cadastrado no sistema
+                      </p>
+                    )}
+                    {!allowNoTeacher && showTeacherSuggestions && teacherSearch.length > 0 && (
+                      <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-card-bg border border-outline-variant rounded-xl shadow-xl max-h-48 overflow-y-auto">
                         {users
                           .filter(u => {
-                            // O professor logado SEMPRE aparece na lista
+                            if (effectiveRole === 'PROFESSOR' && u.role === 'ADMIN') return false;
                             if (u.id === user?.id) return true;
-
                             const userCourseIds = parseJsonArray(u.courseId);
-
-                            // Se o professor NÃO tem courseId vinculado, ele aparece para qualquer curso (disponível)
                             if (userCourseIds.length === 0) return true;
-
-                            // Se tem courseId, só aparece se bater com o curso selecionado
                             const course = courses.find(c => c.name === formData.course);
                             const courseIdAuto = `auto_${formData.course}`;
-
                             return userCourseIds.some(id =>
-                              id === formData.course ||
-                              id === courseIdAuto ||
+                              id === formData.course || id === courseIdAuto ||
                               (course && id === course.id) ||
                               id.toLowerCase().includes(formData.course.toLowerCase()) ||
                               formData.course.toLowerCase().includes(id.toLowerCase())
                             );
                           })
+                          .filter(u => u.displayName.toLowerCase().includes(teacherSearch.toLowerCase()))
                           .sort((a, b) => a.displayName.localeCompare(b.displayName))
+                          .slice(0, 10)
                           .map(u => (
-                            <option key={u.id} value={u.displayName}>{u.displayName} ({u.role})</option>
+                            <button
+                              key={u.id}
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => {
+                                setFormData({...formData, teacher: u.displayName});
+                                setTeacherSearch(u.displayName);
+                                setShowTeacherSuggestions(false);
+                              }}
+                              className="w-full text-left px-3 py-2 hover:bg-secondary/10 transition-all flex items-center justify-between group"
+                            >
+                              <span className="text-sm font-bold text-text-primary group-hover:text-secondary">{u.displayName}</span>
+                              <span className="text-[9px] text-text-secondary font-medium bg-surface-container px-1.5 py-0.5 rounded">{u.role}</span>
+                            </button>
                           ))
                         }
-                      </select>
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-secondary">
-                        <ChevronDown size={14} />
+                        {users.filter(u => {
+                          if (effectiveRole === 'PROFESSOR' && u.role === 'ADMIN') return false;
+                          if (u.id === user?.id) return true;
+                          const userCourseIds = parseJsonArray(u.courseId);
+                          if (userCourseIds.length === 0) return true;
+                          const course = courses.find(c => c.name === formData.course);
+                          const courseIdAuto = `auto_${formData.course}`;
+                          return userCourseIds.some(id =>
+                            id === formData.course || id === courseIdAuto ||
+                            (course && id === course.id) ||
+                            id.toLowerCase().includes(formData.course.toLowerCase()) ||
+                            formData.course.toLowerCase().includes(id.toLowerCase())
+                          );
+                        }).filter(u => u.displayName.toLowerCase().includes(teacherSearch.toLowerCase())).length === 0 && (
+                          <div className="px-3 py-2 text-[11px] text-text-secondary italic">
+                            Nenhum professor encontrado. Pressione Enter para cadastrar como externo.
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                   {!formData.course && !allowNoTeacher && <p className="text-[9px] text-text-secondary italic ml-1">* Selecione o curso primeiro</p>}
                 </div>
                 <div className="space-y-1.5 text-text-secondary opacity-50">
                    <label className="text-[11px] font-bold uppercase tracking-wider block ml-1">ID Fiscal / Matrícula</label>
                    <div className="w-full h-11 border border-outline-variant rounded-lg bg-surface-container px-3 flex items-center text-xs font-mono">
                       {allowNoTeacher
-                        ? <span className="text-purple-400 italic">Modo teste</span>
+                        ? <span className="text-emerald-400 italic">Cadastro manual</span>
                         : (users.find(u => u.displayName === formData.teacher)?.id.substring(0,8).toUpperCase() || '---')
                       }
                    </div>
@@ -1024,17 +1122,19 @@ const EventForm = ({ setView, initialData }: { setView: (v: View) => void, initi
               <div className="space-y-1.5 text-text-secondary">
                 <div className="flex justify-between items-center mb-1 px-1">
                   <label className="text-[11px] font-bold uppercase tracking-wider block">Descrição / Detalhes</label>
-                  <span className={`text-[10px] font-black tracking-tighter ${formData.description.length < 150 ? 'text-red-500' : 'text-green-500'}`}>
-                    {formData.description.length} / 150 MÍNIMO
-                  </span>
+                  {formData.description.length > 0 && (
+                    <span className="text-[10px] font-black tracking-tighter text-text-secondary">
+                      {formData.description.length} caracteres
+                    </span>
+                  )}
                 </div>
                 <textarea 
                   value={formData.description}
                   onChange={(e) => setFormData({...formData, description: e.target.value})}
                   className="w-full border border-outline-variant rounded-lg bg-surface-container p-4 text-sm focus:ring-2 focus:ring-secondary-container transition-all outline-none resize-none h-32 text-text-primary" 
-                  placeholder="Descreva os objetivos acadêmicos da atividade (mínimo 150 caracteres)..."
+                  placeholder="Descreva os objetivos acadêmicos da atividade..."
                 ></textarea>
-                <p className="text-right text-[10px] text-text-secondary font-mono font-medium italic mt-1">Obrigatório detalhamento técnico completo.</p>
+                <p className="text-right text-[10px] text-text-secondary font-mono font-medium italic mt-1">Opcional — detalhe os objetivos acadêmicos quando necessário.</p>
               </div>
             </div>
           </div>

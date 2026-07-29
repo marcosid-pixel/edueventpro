@@ -173,7 +173,7 @@ const CourseManagementView = ({ onEditEvent, setView }: { onEditEvent?: (e: Acad
   const { data: allEvents, loading: eventsLoading, refresh: refreshEvents } = useRealtimeCollection<AcademicEvent>('events');
   const { data: users, loading: usersLoading } = useRealtimeCollection<User>('users');
   
-  const isAdmin = effectiveRole === 'ADMIN';
+  const isAdmin = effectiveRole === 'ADMIN' || effectiveRole === 'COORDENADOR';
 
   const [loading, setLoading] = useState(false);
   const [activeCourseMenu, setActiveCourseMenu] = useState<string | null>(null);
@@ -382,7 +382,7 @@ const CourseManagementView = ({ onEditEvent, setView }: { onEditEvent?: (e: Acad
     }));
   };
 
-  const teachers = users.filter(u => u.role === 'PROFESSOR' || u.role === 'ADMIN');
+  const teachers = users.filter(u => u.role === 'PROFESSOR' || u.role === 'ADMIN' || u.role === 'COORDENADOR');
 
   const handleUpdateBatch = async (batchId: string, currentTitle: string) => {
     const newTitle = prompt('Novo título para todos os eventos do lote:', currentTitle);

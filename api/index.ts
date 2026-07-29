@@ -16,8 +16,18 @@ if (!process.env.SESSION_SECRET) {
   console.error("SESSION_SECRET é obrigatório. Defina no arquivo .env");
 }
 
+// Trust proxy - necessário no Vercel/serverless
+app.set('trust proxy', 1);
+
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000').split(',').map(s => s.trim());
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, true);
+    }
+  },
   credentials: true,
 }));
 app.use(express.json());
@@ -33,9 +43,9 @@ app.use("/api/auth/login", loginLimiter);
 app.use(
   cookieSession({
     name: "session",
-    keys: [process.env.SESSION_SECRET],
+    keys: [process.env.SESSION_SECRET || 'fallback_secret_key'],
     maxAge: 24 * 60 * 60 * 1000,
-    secure: process.env.NODE_ENV === "production",
+    secure: false,
     sameSite: "lax",
     httpOnly: true,
   })

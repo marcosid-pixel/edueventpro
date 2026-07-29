@@ -142,7 +142,7 @@ router.post("/request-reset", async (req, res) => {
 
     const user = result.rows[0] as any;
     
-    if (!process.env.RESEND_API_KEY) {
+    if (!process.env.SMTP_EMAIL) {
       return res.status(500).json({ error: "Servidor de e-mail não configurado" });
     }
 
@@ -179,7 +179,7 @@ router.post("/send-reset-link", async (req, res) => {
     if (userResult.rows.length === 0) return res.status(404).json({ error: "Usuário não encontrado" });
     const user = userResult.rows[0] as any;
 
-    if (!process.env.RESEND_API_KEY) {
+    if (!process.env.SMTP_EMAIL) {
       return res.status(500).json({ error: "Servidor de e-mail não configurado no .env" });
     }
 
@@ -201,7 +201,7 @@ router.post("/send-reset-link", async (req, res) => {
     res.json({ success: true });
   } catch (err: any) {
     console.error("Erro ao enviar email:", err);
-    res.status(500).json({ error: "Falha ao enviar e-mail. Verifique a configuração RESEND_API_KEY no .env" });
+    res.status(500).json({ error: "Falha ao enviar e-mail. Verifique a configuração SMTP_EMAIL no .env" });
   }
 });
 

@@ -142,20 +142,21 @@ export default function App() {
   }
 
   const renderView = () => {
+    const isAdminOrCoordinator = effectiveRole === 'ADMIN' || effectiveRole === 'COORDENADOR';
     switch (currentView) {
-      case 'dashboard': return <Dashboard setView={handleSetView} onNewEvent={handleNewEvent} onEdit={startEdit} onDelete={effectiveRole === 'ADMIN' ? handleDelete : undefined} />;
-      case 'controle-geral': return <ScheduleHub onEdit={startEdit} onNewEvent={handleNewEvent} onDelete={effectiveRole === 'ADMIN' ? handleDelete : undefined} />;
-      case 'unified-calendar': return <UnifiedCalendar onEdit={startEdit} onDelete={effectiveRole === 'ADMIN' ? handleDelete : undefined} />;
-      case 'events': return <EventList onEdit={startEdit} onDelete={effectiveRole === 'ADMIN' ? handleDelete : undefined} />;
+      case 'dashboard': return <Dashboard setView={handleSetView} onNewEvent={handleNewEvent} onEdit={startEdit} onDelete={isAdminOrCoordinator ? handleDelete : undefined} />;
+      case 'controle-geral': return <ScheduleHub onEdit={startEdit} onNewEvent={handleNewEvent} onDelete={isAdminOrCoordinator ? handleDelete : undefined} />;
+      case 'unified-calendar': return <UnifiedCalendar onEdit={startEdit} onDelete={isAdminOrCoordinator ? handleDelete : undefined} />;
+      case 'events': return <EventList onEdit={startEdit} onDelete={isAdminOrCoordinator ? handleDelete : undefined} />;
       case 'courses': return <CourseManagementView onEditEvent={startEdit} setView={setView} />;
       case 'course-history': return <CourseHistoryView setView={handleSetView} onEdit={startEdit} />;
-      case 'users-admin': return effectiveRole === 'ADMIN' ? <UserManagementView /> : <Dashboard setView={handleSetView} onNewEvent={handleNewEvent} />;
+      case 'users-admin': return isAdminOrCoordinator ? <UserManagementView /> : <Dashboard setView={handleSetView} onNewEvent={handleNewEvent} />;
       case 'speakers': return <SpeakerView />;
-      case 'reports': return effectiveRole === 'ADMIN' ? <ReportsView /> : <Dashboard setView={handleSetView} onNewEvent={handleNewEvent} />;
+      case 'reports': return isAdminOrCoordinator ? <ReportsView /> : <Dashboard setView={handleSetView} onNewEvent={handleNewEvent} />;
       case 'new-event': return <EventForm setView={handleSetView} initialData={editingEvent} />;
       case 'login': return <LoginView setView={handleSetView} />;
       case 'signup': return <SignupView setView={handleSetView} />;
-      case 'logs': return effectiveRole === 'ADMIN' ? <LogsView /> : <Dashboard setView={handleSetView} onNewEvent={handleNewEvent} />;
+      case 'logs': return isAdminOrCoordinator ? <LogsView /> : <Dashboard setView={handleSetView} onNewEvent={handleNewEvent} />;
       case 'settings': return <SettingsView />;
       default: return <Dashboard setView={handleSetView} onNewEvent={handleNewEvent} />;
     }

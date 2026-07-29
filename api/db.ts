@@ -60,6 +60,8 @@ export async function initDb() {
       { table: 'activity_logs', column: 'userPhotoURL', type: 'TEXT' },
       { table: 'users', column: 'workStart', type: "TEXT DEFAULT '09:00'" },
       { table: 'users', column: 'workEnd', type: "TEXT DEFAULT '18:00'" },
+      { table: 'users', column: 'createdBy', type: 'TEXT' },
+      { table: 'users', column: 'pending_delete', type: 'BOOLEAN DEFAULT 0' },
     ];
 
     for (const item of columnsToEnsure) {

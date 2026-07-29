@@ -7,7 +7,7 @@ import { parseJsonArray } from '../utils/index';
 
 const EventList = ({ onEdit, onDelete }: { onEdit: (e: AcademicEvent) => void, onDelete: (id: string) => void }) => {
   const { user, effectiveRole } = useAuth();
-  const isAdmin = effectiveRole === 'ADMIN';
+  const isAdmin = effectiveRole === 'ADMIN' || effectiveRole === 'COORDENADOR';
   const { data: events } = useRealtimeCollection<AcademicEvent>('events');
   const { data: courses } = useRealtimeCollection<Course>('courses');
 

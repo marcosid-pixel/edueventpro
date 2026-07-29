@@ -240,7 +240,7 @@ export const Header = ({ setView, currentView, onNewEvent }: { setView: (v: View
             <p className="text-sm text-text-primary tracking-wide">
               Olá, <span className="font-medium">{profile.displayName}</span>
             </p>
-            <p className="text-[10px] text-text-secondary font-medium tracking-wider">{effectiveRole === 'ADMIN' ? 'Administrador' : 'Professor(a)'}</p>
+            <p className="text-[10px] text-text-secondary font-medium tracking-wider">{effectiveRole === 'ADMIN' ? 'Administrador' : effectiveRole === 'COORDENADOR' ? 'Coordenador(a)' : 'Professor(a)'}</p>
           </div>
           <img alt="Perfil" onClick={() => setView('settings')}
             className="w-9 h-9 rounded-full border border-outline-variant object-cover cursor-pointer hover:ring-2 hover:ring-secondary-container transition-all"
